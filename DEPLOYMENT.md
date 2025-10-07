@@ -23,7 +23,7 @@ git add .
 git commit -m "Initial commit: Complete LTQG framework"
 
 # Create GitHub repository and push
-git remote add origin https://github.com/yourusername/log-time-quantum-gravity.git
+git remote add origin https://github.com/YOURUSERNAME/log_time.git
 git branch -M main
 git push -u origin main
 ```
@@ -35,7 +35,7 @@ git push -u origin main
 4. Choose **main** branch and **/docs** folder
 5. Click **Save**
 
-Your website will be available at: `https://yourusername.github.io/log-time-quantum-gravity/`
+Your website will be available at: `https://YOURUSERNAME.github.io/log_time/`
 
 ### 3. Update Links
 After creating your repository, update the following:
@@ -54,7 +54,7 @@ Update GitHub repository links:
 ## 📁 Final Project Structure
 
 ```
-log-time-quantum-gravity/
+log_time/
 ├── .github/
 │   └── workflows/
 │       └── pages.yml                 # GitHub Pages deployment

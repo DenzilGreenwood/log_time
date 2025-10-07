@@ -2,6 +2,10 @@
 Log-Time Quantum Gravity (LTQG) Core Library
 ============================================
 
+Author: Denzil James Greenwood
+GitHub: https://github.com/DenzilGreenwood/log_time
+License: MIT
+
 This module implements the core mathematical framework for Log-Time Quantum Gravity,
 a theory that reconciles General Relativity's multiplicative time-dilation structure
 with Quantum Mechanics' additive phase evolution through the logarithmic time variable:

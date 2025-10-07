@@ -1,9 +1,9 @@
 # 🌌 Log-Time Quantum Gravity (LTQG)
 
-[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://yourusername.github.io/log-time-quantum-gravity/)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://denzilgreenwood.github.io/log_time/)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-research-orange.svg)](https://github.com/yourusername/log-time-quantum-gravity)
+[![Status](https://img.shields.io/badge/status-research-orange.svg)](https://github.com/DenzilGreenwood/log_time)
 
 > **Bridging the temporal divide between General Relativity and Quantum Mechanics through logarithmic time coordinates**
 
@@ -11,8 +11,8 @@ A comprehensive Python implementation of the Log-Time Quantum Gravity framework,
 
 ## 🚀 Quick Links
 
-- 📖 **[Interactive Website](https://yourusername.github.io/log-time-quantum-gravity/)** - Explore LTQG concepts visually
-- 📄 **[Research Paper](LTQG_Research_Paper.pdf)** - Complete theoretical framework  
+- 📖 **[Interactive Website](https://denzilgreenwood.github.io/log_time/)** - Explore LTQG concepts visually
+- 📄 **[Research Paper](docs/LTQG_Research_Paper.pdf)** - Complete theoretical framework by Denzil James Greenwood
 - 📓 **[Educational Notebook](LTQG_Educational_Notebook.ipynb)** - Step-by-step tutorial
 - 🖼️ **[Figure Gallery](figs/)** - All publication-quality visualizations
 
@@ -72,8 +72,8 @@ Implementation of all figures from the LTQG paper:
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/log-time-quantum-gravity.git
-cd log-time-quantum-gravity
+git clone https://github.com/DenzilGreenwood/log_time.git
+cd log_time
 
 # Install dependencies
 pip install -r requirements.txt
@@ -269,7 +269,7 @@ The project includes a beautiful GitHub Pages website with:
 - **Quick start guides** and tutorial links
 - **Download links** for papers and notebooks
 
-Visit: **[https://yourusername.github.io/log-time-quantum-gravity/](https://yourusername.github.io/log-time-quantum-gravity/)**
+Visit: **[https://denzilgreenwood.github.io/log_time/](https://denzilgreenwood.github.io/log_time/)**
 
 ## 📋 Requirements
 
@@ -296,9 +296,9 @@ If you use this work in research, please cite:
 ```bibtex
 @misc{ltqg2025,
   title={Log-Time Quantum Gravity: A Reparameterization Approach to Temporal Unification},
-  author={LTQG Research Group},
+  author={Denzil James Greenwood},
   year={2025},
-  note={Available at: https://github.com/yourusername/log-time-quantum-gravity}
+  note={Available at: https://github.com/DenzilGreenwood/log_time}
 }
 ```
 
@@ -314,7 +314,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Bridging the temporal divide between General Relativity and Quantum Mechanics*
 
-[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://yourusername.github.io/log-time-quantum-gravity/)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://denzilgreenwood.github.io/log_time/)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 

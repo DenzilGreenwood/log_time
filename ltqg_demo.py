@@ -2,6 +2,10 @@
 Log-Time Quantum Gravity: Complete Demonstration
 ================================================
 
+Author: Denzil James Greenwood
+GitHub: https://github.com/DenzilGreenwood/log_time
+License: MIT
+
 This script provides a comprehensive demonstration of the LTQG framework,
 generating all figures from the paper and showcasing the experimental
 predictions described in the theory.

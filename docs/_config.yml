@@ -1,7 +1,7 @@
 title: "Log-Time Quantum Gravity"
 description: "Unifying General Relativity and Quantum Mechanics through logarithmic time coordinates"
-url: "https://yourusername.github.io"
-baseurl: "/log-time-quantum-gravity"
+url: "https://denzilgreenwood.github.io"
+baseurl: "/log_time"
 
 # GitHub Pages settings
 plugins:

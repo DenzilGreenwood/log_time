@@ -127,7 +127,7 @@ Desktop.ini
 *.tmp
 *.temp
 
-# Generated output files (keep the figs but ignore temp outputs)
-# *.png
-# *.pdf
-*.eps
+# Generated output files (keep the important ones)
+# Keep docs/ and figs/ but ignore temporary outputs
+temp_output/
+*.backup

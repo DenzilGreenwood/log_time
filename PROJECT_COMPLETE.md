@@ -1,6 +1,6 @@
 # 🎉 LTQG Project - GitHub Ready!
 
-Your Log-Time Quantum Gravity project has been successfully cleaned up and prepared for GitHub with a beautiful website!
+Your Log-Time Quant- Your site will be live at: `https://denzilgreenwood.github.io/log_time/`m Gravity project has been successfully cleaned up and prepared for GitHub with a beautiful website!
 
 ## ✅ What's Been Completed
 
@@ -45,7 +45,7 @@ git add .
 git commit -m "🌌 Initial release: Complete LTQG framework with GitHub Pages"
 
 # Create repository on GitHub and push
-git remote add origin https://github.com/YOURUSERNAME/log-time-quantum-gravity.git
+git remote add origin https://github.com/DenzilGreenwood/log_time.git
 git branch -M main
 git push -u origin main
 ```
@@ -77,7 +77,7 @@ After creating the repository, update these files with your actual GitHub userna
 ## 🎯 Final File Structure
 
 ```
-log-time-quantum-gravity/
+log_time/
 ├── 📁 .github/workflows/pages.yml    # Auto-deployment
 ├── 📁 docs/                          # GitHub Pages content
 │   ├── index.html                    # Beautiful website

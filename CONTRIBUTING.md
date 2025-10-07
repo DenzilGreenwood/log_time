@@ -30,8 +30,8 @@ We welcome contributions to the Log-Time Quantum Gravity project! This document 
 
 ```bash
 # Clone your fork
-git clone https://github.com/yourusername/log-time-quantum-gravity.git
-cd log-time-quantum-gravity
+git clone https://github.com/yourusername/log_time.git
+cd log_time
 
 # Install in development mode
 pip install -e .
@@ -226,7 +226,7 @@ All contributions undergo review focusing on:
 
 - **Questions**: Open a GitHub issue with the "question" label
 - **Discussions**: Use GitHub Discussions for broader topics
-- **Documentation**: Check the [project website](https://yourusername.github.io/log-time-quantum-gravity/)
+- **Documentation**: Check the [project website](https://denzilgreenwood.github.io/log_time/)
 - **Examples**: Refer to the educational notebook and demo scripts
 
 ## 🏆 Recognition

@@ -2,6 +2,10 @@
 Log-Time Quantum Gravity Visualization Suite
 ============================================
 
+Author: Denzil James Greenwood
+GitHub: https://github.com/DenzilGreenwood/log_time
+License: MIT
+
 This module provides comprehensive visualization capabilities for LTQG phenomena,
 implementing all figures described in the Log-Time Quantum Gravity paper.
 

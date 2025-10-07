@@ -2,6 +2,10 @@
 Log-Time Quantum Gravity Experimental Design Module
 ===================================================
 
+Author: Denzil James Greenwood
+GitHub: https://github.com/DenzilGreenwood/log_time
+License: MIT
+
 This module implements the specific experimental protocols and predictions
 described in the LTQG paper for testing the theory's falsifiable signatures.
 
