@@ -1,0 +1,24 @@
+title: "Log-Time Quantum Gravity"
+description: "Unifying General Relativity and Quantum Mechanics through logarithmic time coordinates"
+url: "https://yourusername.github.io"
+baseurl: "/log-time-quantum-gravity"
+
+# GitHub Pages settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# Exclude files
+exclude:
+  - vendor
+  - .bundle
+  - .sass-cache
+  - _site
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - README.md

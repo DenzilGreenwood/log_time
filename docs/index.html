@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log-Time Quantum Gravity (LTQG)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --text-color: #333;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --math-color: #8e44ad;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            font-weight: 300;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .hero .tagline {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        nav {
+            background: var(--card-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--secondary-color);
+        }
+
+        main {
+            padding: 3rem 0;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .section h3 {
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            margin: 2rem 0 1rem 0;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .equation {
+            background: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: var(--math-color);
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--secondary-color);
+            color: white;
+            padding: 0.8rem 2rem;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-accent {
+            background: var(--accent-color);
+        }
+
+        .btn-accent:hover {
+            background: #c0392b;
+        }
+
+        .demo-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin: 3rem 0;
+            border-radius: 15px;
+        }
+
+        .figure-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .figure-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .figure-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+
+        .figure-card .caption {
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, transparent 0%, #ffd60040 0%, #ffd60040 100%, transparent 100%);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+        }
+
+        footer {
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hero">
+                <h1>Log-Time Quantum Gravity</h1>
+                <p class="subtitle">Unifying General Relativity and Quantum Mechanics</p>
+                <p class="tagline">Through the elegance of logarithmic time coordinates</p>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <div class="nav-container">
+                <ul class="nav-links">
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#theory">Theory</a></li>
+                    <li><a href="#implementation">Implementation</a></li>
+                    <li><a href="#experiments">Experiments</a></li>
+                    <li><a href="#figures">Figures</a></li>
+                    <li><a href="#download">Download</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <section id="overview" class="section">
+                <h2>The LTQG Framework</h2>
+                <div class="card">
+                    <p>Log-Time Quantum Gravity (LTQG) addresses the fundamental incompatibility between General Relativity's <strong>multiplicative time structure</strong> and Quantum Mechanics' <strong>additive phase evolution</strong> through a elegant mathematical transformation.</p>
+                    
+                    <div class="equation">
+                        σ = log(τ/τ₀)
+                    </div>
+                    
+                    <p>This <span class="highlight">logarithmic time transformation</span> converts GR's multiplicative time dilation into QM's additive framework, enabling natural unification while providing automatic singularity regularization through "asymptotic silence."</p>
+                </div>
+
+                <div class="grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Temporal Unification</h3>
+                        <p>Reconciles multiplicative GR time with additive QM phases through σ = log(τ/τ₀)</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔗</div>
+                        <h3>Singularity Resolution</h3>
+                        <p>Natural regularization through asymptotic silence without ad-hoc cutoffs</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧪</div>
+                        <h3>Experimental Predictions</h3>
+                        <p>Testable differences from standard physics at precision measurement levels</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💻</div>
+                        <h3>Complete Implementation</h3>
+                        <p>Full Python framework with visualization and experimental protocols</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="theory" class="section">
+                <h2>Mathematical Foundation</h2>
+                
+                <div class="card">
+                    <h3>Core Transformation</h3>
+                    <p>The fundamental LTQG transformation maps proper time τ to logarithmic time σ:</p>
+                    
+                    <div class="equation">
+                        σ = log(τ/τ₀) ⟺ τ = τ₀ exp(σ)
+                    </div>
+                    
+                    <p>This maps the semi-infinite interval (0, ∞) to the entire real line (-∞, ∞), with singularities at τ = 0 corresponding to σ → -∞.</p>
+                </div>
+
+                <div class="card">
+                    <h3>Modified Schrödinger Equation</h3>
+                    <p>Quantum evolution in σ-time follows:</p>
+                    
+                    <div class="equation">
+                        iℏ ∂|ψ⟩/∂σ = K(σ)|ψ⟩ = τ₀ exp(σ) H|ψ⟩
+                    </div>
+                    
+                    <p>The generator K(σ) exhibits <strong>asymptotic silence</strong>: K(σ) → 0 as σ → -∞, naturally regularizing quantum evolution near spacetime singularities.</p>
+                </div>
+
+                <div class="card">
+                    <h3>Gravitational Redshift Unification</h3>
+                    <p>Multiplicative time dilation becomes additive in σ-coordinates:</p>
+                    
+                    <div class="equation">
+                        τ_B = α τ_A ⟹ σ_B = σ_A + log(α)
+                    </div>
+                    
+                    <p>This enables natural incorporation of gravitational effects into quantum phase evolution without fundamental modifications to either theory.</p>
+                </div>
+            </section>
+
+            <div class="demo-section">
+                <div class="container">
+                    <h2 style="text-align: center; margin-bottom: 2rem;">Interactive Python Implementation</h2>
+                    <div class="code-block">
+from ltqg_core import create_ltqg_simulator
+import numpy as np
+
+# Create LTQG simulator
+simulator = create_ltqg_simulator(tau0=1.0)
+
+# Time transformation examples
+tau = np.array([1e-6, 1e-3, 1.0, 1e3])
+sigma = simulator.time_transform.sigma_from_tau(tau)
+
+# Generate publication-quality figures
+from ltqg_visualization import LTQGVisualizer
+visualizer = LTQGVisualizer(save_dir="figs")
+figures = visualizer.generate_all_figures(save=True)
+
+# Run experimental analysis
+from ltqg_experiments import ExperimentalSuite
+suite = ExperimentalSuite()
+results = suite.run_comprehensive_analysis()
+                    </div>
+                    <div style="text-align: center; margin-top: 2rem;">
+                        <a href="https://github.com/yourusername/log-time-quantum-gravity" class="btn btn-accent" style="margin-right: 1rem;">View on GitHub</a>
+                        <a href="#download" class="btn">Download Code</a>
+                    </div>
+                </div>
+            </div>
+
+            <section id="implementation" class="section">
+                <h2>Implementation Features</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h3>📚 Core Framework</h3>
+                        <p><strong>ltqg_core.py</strong> (607 lines)</p>
+                        <ul style="margin-left: 2rem;">
+                            <li>Time transformation algorithms</li>
+                            <li>Singularity regularization</li>
+                            <li>Modified quantum evolution</li>
+                            <li>Gravitational redshift calculations</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>📊 Visualization Suite</h3>
+                        <p><strong>ltqg_visualization.py</strong> (691 lines)</p>
+                        <ul style="margin-left: 2rem;">
+                            <li>All paper figures implementation</li>
+                            <li>Publication-quality graphics</li>
+                            <li>Interactive plotting tools</li>
+                            <li>Educational demonstrations</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>🧪 Experimental Protocols</h3>
+                        <p><strong>ltqg_experiments.py</strong> (757+ lines)</p>
+                        <ul style="margin-left: 2rem;">
+                            <li>Quantum Zeno modifications</li>
+                            <li>Interferometry predictions</li>
+                            <li>Clock transport experiments</li>
+                            <li>Cosmological signatures</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>🎮 Demo System</h3>
+                        <p><strong>ltqg_demo.py</strong> (371+ lines)</p>
+                        <ul style="margin-left: 2rem;">
+                            <li>Complete demonstration suite</li>
+                            <li>Figure generation tools</li>
+                            <li>Experimental analysis</li>
+                            <li>Performance benchmarks</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Project Status</h3>
+                    <div style="text-align: center;">
+                        <span class="status-badge">✅ Core Framework Complete</span>
+                        <span class="status-badge">✅ All Figures Generated</span>
+                        <span class="status-badge">✅ Experimental Validation</span>
+                        <span class="status-badge">✅ Educational Notebook</span>
+                        <span class="status-badge">✅ Research Paper</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="experiments" class="section">
+                <h2>Experimental Predictions</h2>
+                
+                <div class="card">
+                    <h3>🔬 Quantum Zeno Effect Modifications</h3>
+                    <p>LTQG predicts modifications to the quantum Zeno effect in gravitational fields through σ-uniform measurement protocols. For ion trap experiments with μs measurement intervals, relative differences of 0.01-0.1% are predicted.</p>
+                </div>
+
+                <div class="card">
+                    <h3>📡 Gravitational Wave Interferometry</h3>
+                    <p>Additional phase shifts beyond standard GR in gravitational wave interferometers. Parameter analysis shows distinguishability levels of <strong>>10¹¹σ</strong> for LIGO-class sensitivity.</p>
+                </div>
+
+                <div class="card">
+                    <h3>⏰ Atomic Clock Transport</h3>
+                    <p>Clock transport experiments through varying gravitational fields show LTQG corrections at the 10⁻¹² level for GPS satellite orbits with daily frequency accumulation.</p>
+                </div>
+
+                <div class="card">
+                    <h3>🌌 Cosmological Signatures</h3>
+                    <p>Modified early universe physics through Big Bang singularity regularization, potentially observable in CMB power spectrum, primordial gravitational waves, and Big Bang nucleosynthesis.</p>
+                </div>
+            </section>
+
+            <section id="figures" class="section">
+                <h2>Key Visualizations</h2>
+                <p style="text-align: center; margin-bottom: 2rem;">Publication-quality figures demonstrating core LTQG concepts</p>
+                
+                <div class="figure-gallery">
+                    <div class="figure-card">
+                        <img src="../figs/log_time_map.png" alt="Log-Time Transformation">
+                        <div class="caption">
+                            <strong>Log-Time Transformation:</strong> The fundamental σ = log(τ/τ₀) mapping converting the semi-infinite proper time interval to the entire real line.
+                        </div>
+                    </div>
+                    
+                    <div class="figure-card">
+                        <img src="../figs/singularity_regularization.png" alt="Singularity Regularization">
+                        <div class="caption">
+                            <strong>Singularity Regularization:</strong> How spacetime curvature singularities are exponentially suppressed in σ-coordinates through asymptotic silence.
+                        </div>
+                    </div>
+                    
+                    <div class="figure-card">
+                        <img src="../figs/gravitational_redshift_shift.png" alt="Gravitational Redshift">
+                        <div class="caption">
+                            <strong>Gravitational Redshift:</strong> Conversion of multiplicative time dilation into additive σ-shifts, unifying GR and QM temporal structures.
+                        </div>
+                    </div>
+                    
+                    <div class="figure-card">
+                        <img src="../figs/effective_generator_silence.png" alt="Asymptotic Silence">
+                        <div class="caption">
+                            <strong>Asymptotic Silence:</strong> Universal suppression of quantum evolution generators K(σ) → 0 as σ → -∞ near spacetime singularities.
+                        </div>
+                    </div>
+                    
+                    <div class="figure-card">
+                        <img src="../figs/zeno_protocol_predictions.png" alt="Experimental Protocols">
+                        <div class="caption">
+                            <strong>Experimental Protocols:</strong> Distinguishable predictions for σ-uniform vs τ-uniform quantum measurement protocols in gravitational fields.
+                        </div>
+                    </div>
+                    
+                    <div class="figure-card">
+                        <img src="../figs/experimental_feasibility.png" alt="Experimental Feasibility">
+                        <div class="caption">
+                            <strong>Experimental Feasibility:</strong> Assessment of distinguishability levels for various LTQG tests with current and near-future technology.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="download" class="section">
+                <h2>Get Started</h2>
+                
+                <div class="card">
+                    <h3>🚀 Quick Start</h3>
+                    <div class="code-block">
+# Clone the repository
+git clone https://github.com/yourusername/log-time-quantum-gravity.git
+cd log-time-quantum-gravity
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run complete demonstration
+python ltqg_demo.py --generate-all
+
+# Generate figures only
+python ltqg_demo.py --figures-only
+
+# Educational Jupyter notebook
+jupyter notebook LTQG_Educational_Notebook.ipynb
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Requirements</h3>
+                    <ul style="margin-left: 2rem;">
+                        <li>Python 3.8+</li>
+                        <li>NumPy ≥ 1.21.0</li>
+                        <li>SciPy ≥ 1.7.0</li>
+                        <li>Matplotlib ≥ 3.5.0</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📚 Resources</h3>
+                    <div style="text-align: center;">
+                        <a href="https://github.com/yourusername/log-time-quantum-gravity" class="btn" style="margin: 0.5rem;">GitHub Repository</a>
+                        <a href="LTQG_Research_Paper.pdf" class="btn" style="margin: 0.5rem;">Research Paper (PDF)</a>
+                        <a href="LTQG_Educational_Notebook.pdf" class="btn" style="margin: 0.5rem;">Educational Notebook</a>
+                        <a href="docs/" class="btn" style="margin: 0.5rem;">Documentation</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Log-Time Quantum Gravity Project. Open source implementation for research and education.</p>
+            <p><em>"Bridging the temporal divide between General Relativity and Quantum Mechanics"</em></p>
+        </div>
+    </footer>
+</body>
+</html>

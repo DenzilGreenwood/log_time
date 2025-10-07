@@ -1,0 +1,52 @@
+MIT License
+
+Copyright (c) 2025 Log-Time Quantum Gravity Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## Academic Use
+
+If you use this software in academic research, please cite:
+
+```
+@misc{ltqg2025,
+  title={Log-Time Quantum Gravity: A Reparameterization Approach to Temporal Unification},
+  author={LTQG Research Group},
+  year={2025},
+  note={Available at: https://github.com/yourusername/log-time-quantum-gravity}
+}
+```
+
+## Research Use
+
+This implementation is provided to support research in quantum gravity and 
+related fields. While the software is freely available, we encourage 
+collaboration and proper attribution in research publications.
+
+## Educational Use
+
+This software is freely available for educational purposes. Educational 
+institutions are encouraged to use and modify the code for teaching quantum 
+gravity concepts, numerical methods, and scientific computing.
+
+## Commercial Use
+
+Commercial use is permitted under the MIT license terms. However, we request 
+that commercial users consider contributing improvements back to the open 
+source project to benefit the broader research community.
