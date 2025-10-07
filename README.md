@@ -12,7 +12,8 @@ A comprehensive Python implementation of the Log-Time Quantum Gravity framework,
 ## 🚀 Quick Links
 
 - 📖 **[Interactive Website](https://denzilgreenwood.github.io/log_time/)** - Explore LTQG concepts visually
-- 📄 **[Research Paper](docs/LTQG_Research_Paper.pdf)** - Complete theoretical framework by Denzil James Greenwood
+- 📄 **[Main Research Paper](docs/LTQG_Research_Paper.pdf)** - Complete theoretical framework
+- 📄 **[Problem of Time Paper](docs/LTQG_Problem_of_Time.pdf)** - Canonical quantum gravity applications
 - 📓 **[Educational Notebook](LTQG_Educational_Notebook.ipynb)** - Step-by-step tutorial
 - 🖼️ **[Figure Gallery](figs/)** - All publication-quality visualizations
 
@@ -134,7 +135,8 @@ log-time-quantum-gravity/
 │
 ├── 📓 Educational Materials
 │   ├── LTQG_Educational_Notebook.ipynb  # Interactive tutorial (27 cells)
-│   └── LTQG_Research_Paper.tex          # LaTeX research paper source
+│   ├── LTQG_Research_Paper.tex          # Main research paper source
+│   └── LTQG_Problem_of_Time.tex         # Problem of time paper source
 │
 ├── 📊 Generated Content
 │   ├── figs/                     # Publication-quality figures (16 images)
