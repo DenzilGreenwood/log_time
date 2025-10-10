@@ -11,11 +11,34 @@ A comprehensive Python implementation of the Log-Time Quantum Gravity framework,
 
 ## 🚀 Quick Links
 
+- 🎮 **[🔥 INTERACTIVE DEMO 🔥](https://denzilgreenwood.github.io/log_time/ltqg_black_hole_webgl.html)** - **NEW! Research-grade educational visualization**
+- 🏠 **[Project Homepage](https://denzilgreenwood.github.io/log_time/)** - Professional landing page
 - 📖 **[Interactive Website](https://denzilgreenwood.github.io/log_time/)** - Explore LTQG concepts visually
 - 📄 **[Main Research Paper](docs/LTQG_Research_Paper.pdf)** - Complete theoretical framework
 - 📄 **[Problem of Time Paper](docs/LTQG_Problem_of_Time.pdf)** - Canonical quantum gravity applications
 - 📓 **[Educational Notebook](LTQG_Educational_Notebook.ipynb)** - Step-by-step tutorial
 - 🖼️ **[Figure Gallery](figs/)** - All publication-quality visualizations
+
+## 🎓 **NEW: Interactive Educational Tool**
+
+**🚀 [Launch LTQG Black Hole Visualization](https://denzilgreenwood.github.io/log_time/ltqg_black_hole_webgl.html)**
+
+Our breakthrough **research-grade educational visualization** makes LTQG concepts interactive and accessible:
+
+### ✨ **Features**
+- **🔬 σ-Additivity Demo**: Interactive sliders show D_A × D_B ↔ σ_A + σ_B equivalence
+- **📊 Real-Time Instruments**: Live physics readouts (σ, τ = τ₀e^σ, 1/τ, etc.)
+- **🎬 Asymptotic Silence**: Watch geodesic motion freeze as σ → -∞ 
+- **⚖️ Paradigm Comparison**: Toggle between standard GR and LTQG views
+- **🎮 Professional UI**: Research-grade interface for academic presentations
+
+### 🎯 **Perfect For**
+- **Graduate Physics Courses**: General relativity and quantum gravity modules
+- **Research Groups**: Interactive concept validation and hypothesis testing
+- **Academic Conferences**: Live demonstrations and poster presentations
+- **Self-Guided Learning**: Hands-on exploration of complex LTQG mathematics
+
+*First interactive LTQG demonstration tool - making quantum gravity concepts accessible!*
 
 ## 🎯 What is LTQG?
 
