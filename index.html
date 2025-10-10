@@ -4,152 +4,373 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log-Time Quantum Gravity - Interactive Educational Tool</title>
+    <meta name="description" content="Log-Time Quantum Gravity (LTQG) — unifying GR and QM via σ = log(τ/τ₀).">
+    
+    <!-- MathJax for proper equations -->
+    <script>
+      MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] } };
+    </script>
+    <script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            color: #ffffff;
-            min-height: 100vh;
+            padding: 0;
+            background: #ffffff;
+            color: #333333;
+            line-height: 1.6;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #4A90E2, #357ABD);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            text-align: center;
+            padding: 0 20px;
         }
         
         h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #00d4ff, #ff6b00);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            font-weight: 300;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
         .subtitle {
-            font-size: 1.2em;
-            color: #b0b0b0;
-            margin-bottom: 30px;
+            font-size: 1.4em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            font-weight: 300;
         }
         
-        .demo-link {
+        .btn {
             display: inline-block;
-            background: linear-gradient(45deg, #00d4ff, #0099cc);
-            color: white;
+            background: #ffffff;
+            color: #4A90E2;
             padding: 15px 30px;
             text-decoration: none;
-            border-radius: 10px;
-            font-size: 1.3em;
+            border-radius: 8px;
+            font-size: 1.1em;
             margin: 10px;
-            transition: transform 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            font-weight: 500;
         }
         
-        .demo-link:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.5);
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: #f8f9fa;
+        }
+        
+        .btn-accent {
+            background: #FF6B6B;
+            color: white;
+        }
+        
+        .btn-accent:hover {
+            background: #FF5252;
+        }
+        
+        .section {
+            padding: 60px 0;
+        }
+        
+        .section:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .section h2 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #4A90E2;
+            font-weight: 300;
+        }
+        
+        .section p {
+            text-align: center;
+            font-size: 1.2em;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            color: #666;
         }
         
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 40px;
             margin: 40px 0;
         }
         
         .feature {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 212, 255, 0.2);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
         }
         
         .feature h3 {
-            color: #00d4ff;
-            margin-bottom: 10px;
+            color: #4A90E2;
+            margin-bottom: 15px;
+            font-size: 1.4em;
         }
         
-        .preview-image {
-            max-width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            margin: 20px 0;
-        }
-        
-        .academic-info {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 30px;
-            border-radius: 15px;
-            margin-top: 40px;
-            border: 1px solid rgba(0, 212, 255, 0.1);
-        }
-        
-        .citation {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            margin: 20px 0;
+        .feature p {
+            color: #666;
+            font-size: 1em;
             text-align: left;
+            margin: 0;
+        }
+        
+        .equation {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4A90E2;
+            margin: 20px 0;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        
+        .limitations {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .limitations h4 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        .assumptions {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .assumptions h4 {
+            color: #1565c0;
+            margin-top: 0;
+        }
+        
+        .figure-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .figure-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .figure-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .figure-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .figure-card-content {
+            padding: 15px;
+        }
+        
+        .figure-card h4 {
+            margin: 0 0 10px 0;
+            color: #4A90E2;
+        }
+        
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+        
+        .nav a:hover {
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Log-Time Quantum Gravity</h1>
-        <p class="subtitle">Interactive Educational Visualization Tool</p>
-        
-        <a href="ltqg_black_hole_webgl.html" class="demo-link">
-            🚀 Launch Interactive Demo
-        </a>
-        
-        <div class="features">
-            <div class="feature">
-                <h3>🔬 σ-Additivity Demonstration</h3>
-                <p>Interactive sliders show how gravitational time dilations add logarithmically: D_A × D_B ↔ σ_A + σ_B</p>
+    <div class="hero">
+        <div class="container">
+            <h1>Log-Time Quantum Gravity</h1>
+            <p class="subtitle">Bridging the temporal divide between General Relativity and Quantum Mechanics</p>
+            
+            <div style="text-align:center; margin-top: 2rem;">
+                <a href="https://github.com/DenzilGreenwood/log_time" class="btn btn-accent" style="margin-right: 1rem;" aria-label="View LTQG project on GitHub">View on GitHub</a>
+                <a href="ltqg_black_hole_webgl.html" class="btn" aria-label="Launch interactive LTQG black hole demonstration">Live WebGL Demo</a>
+                <a href="#download" class="btn" style="margin-left: 1rem;" aria-label="Download LTQG code and documentation">Download Code</a>
             </div>
-            
-            <div class="feature">
-                <h3>📊 Real-Time Instruments</h3>
-                <p>Professional readouts display σ, τ = τ₀e^σ, and other LTQG quantities with live updates</p>
-            </div>
-            
-            <div class="feature">
-                <h3>🎬 Asymptotic Silence</h3>
-                <p>Watch geodesic motion freeze as σ → -∞, demonstrating singularity regularization</p>
-            </div>
-            
-            <div class="feature">
-                <h3>⚖️ Paradigm Comparison</h3>
-                <p>Toggle between standard General Relativity and LTQG views to see the differences</p>
-            </div>
-        </div>
-        
-        <div class="academic-info">
-            <h2>🎓 Academic Information</h2>
-            <p>This interactive tool demonstrates the key concepts of Log-Time Quantum Gravity, making complex quantum gravity concepts accessible through hands-on exploration.</p>
-            
-            <h3>📋 Usage</h3>
-            <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
-                <li><strong>Graduate Courses:</strong> General relativity and quantum gravity modules</li>
-                <li><strong>Research Groups:</strong> Interactive concept validation and hypothesis testing</li>
-                <li><strong>Conferences:</strong> Live demonstrations and poster presentations</li>
-                <li><strong>Self-Study:</strong> Guided exploration of LTQG mathematics</li>
-            </ul>
-            
-            <h3>📖 Citation</h3>
-            <div class="citation">
-LTQG Educational Visualization Tool, Log-Time Quantum Gravity Research Project, 2025. 
-Interactive demonstration available at: https://denzilgreenwood.github.io/log_time/
-            </div>
-            
-            <h3>📚 Documentation</h3>
-            <p>Complete implementation details, mathematical foundations, and usage guides available in the <a href="https://github.com/DenzilGreenwood/log_time" style="color: #00d4ff;">GitHub repository</a>.</p>
         </div>
     </div>
+    
+    <div class="section">
+        <div class="container">
+            <h2>🎯 What is LTQG?</h2>
+            <p>Log-Time Quantum Gravity unifies General Relativity's multiplicative time-dilation structure with Quantum Mechanics' additive phase evolution through an elegant logarithmic coordinate transformation.</p>
+            
+            <div class="equation">
+                \( \sigma = \log(\tau/\tau_0) \iff \tau = \tau_0 e^{\sigma} \)
+            </div>
+            
+            <p>This transformation resolves the fundamental tension between multiplicative gravitational effects and additive quantum phases, enabling a unified approach to quantum gravity.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2>✨ Key Features</h2>
+            <div class="features">
+                <div class="feature">
+                    <h3>🔬 σ-Additivity Demonstration</h3>
+                    <p>Interactive sliders show how gravitational time dilations add logarithmically: D_A × D_B ↔ σ_A + σ_B, solving the multiplicative vs additive problem between GR and QM.</p>
+                </div>
+                
+                <div class="feature">
+                    <h3>📊 Real-Time Instruments</h3>
+                    <p>Professional readouts display σ, τ = τ₀e^σ, and other LTQG quantities with live updates, providing quantitative validation of the coordinate transformation.</p>
+                </div>
+                
+                <div class="feature">
+                    <h3>🎬 Asymptotic Silence</h3>
+                    <p>Watch geodesic motion freeze as σ → -∞, demonstrating dynamical singularity regularization without geometric resolution of curvature invariants.</p>
+                </div>
+                
+                <div class="feature">
+                    <h3>⚖️ Paradigm Comparison</h3>
+                    <p>Toggle between standard General Relativity and LTQG views to see the differences in coordinate behavior and singularity treatment.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2>🎓 Educational Applications</h2>
+            <p>Perfect for graduate physics courses, research groups, academic conferences, and self-guided exploration of LTQG concepts.</p>
+            
+            <div class="assumptions">
+                <h4>📋 Key Assumptions & Estimates</h4>
+                <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+                    <li><strong>Curvature Scaling:</strong> Assumes R ∝ τ^(-n) near singularities for collapse models</li>
+                    <li><strong>Sensitivity Numbers:</strong> Order-of-magnitude estimates based on current detector performance</li>
+                    <li><strong>Protocol Dependence:</strong> Deviations appear only under σ-uniform measurement procedures</li>
+                    <li><strong>Integration Times:</strong> Based on feasible experimental durations and phase accumulation rates</li>
+                </ul>
+            </div>
+            
+            <div class="limitations">
+                <h4>⚠️ Current Limitations</h4>
+                <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+                    <li><strong>Dynamical Regularization:</strong> Evolution slows/halts but curvature invariants still diverge</li>
+                    <li><strong>Foliation Choice:</strong> Requires specific spacetime slicing for σ-coordinate implementation</li>
+                    <li><strong>Protocol Specific:</strong> Deviations only observable under σ-uniform (not τ-uniform) procedures</li>
+                    <li><strong>Experimental Validation:</strong> Awaiting precision interferometry tests for verification</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2>🖼️ Figure Gallery</h2>
+            <div class="figure-gallery">
+                <div class="figure-card">
+                    <img src="figs/sigma_tau_mapping.png" alt="σ-τ coordinate transformation visualization" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>Coordinate Transformation</h4>
+                        <p>Visualization of σ = log(τ/τ₀) mapping</p>
+                    </div>
+                </div>
+                
+                <div class="figure-card">
+                    <img src="figs/singularity_regularization.png" alt="Asymptotic silence demonstration near black hole singularity" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>Asymptotic Silence</h4>
+                        <p>Singularity regularization through σ → -∞</p>
+                    </div>
+                </div>
+                
+                <div class="figure-card">
+                    <img src="figs/experimental_feasibility.png" alt="LTQG experimental protocol and sensitivity analysis" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>Experimental Protocols</h4>
+                        <p>Interferometry setups for LTQG detection</p>
+                    </div>
+                </div>
+                
+                <div class="figure-card">
+                    <img src="figs/black_hole_embedding.png" alt="Interactive black hole visualization in LTQG coordinates" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>Black Hole Embedding</h4>
+                        <p>Interactive visualization of LTQG geometry</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="nav">
+                <a href="https://github.com/DenzilGreenwood/log_time" aria-label="GitHub repository">GitHub</a>
+                <a href="docs/LTQG_Research_Paper.pdf" aria-label="Main research paper PDF">Research Paper</a>
+                <a href="docs/LTQG_Problem_of_Time.pdf" aria-label="Problem of Time paper PDF">Problem of Time</a>
+                <a href="LTQG_Educational_Notebook.ipynb" aria-label="Educational Jupyter notebook">Educational Notebook</a>
+            </div>
+            
+            <div class="academic-info">
+                <h3>📖 Citation</h3>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 0.9em; margin: 20px 0;">
+LTQG Educational Visualization Tool, Log-Time Quantum Gravity Research Project, 2025. 
+Interactive demonstration available at: https://denzilgreenwood.github.io/log_time/
+                </div>
+                
+                <p>Complete implementation details, mathematical foundations, and usage guides available in the GitHub repository.</p>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

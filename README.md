@@ -38,7 +38,7 @@ Our breakthrough **research-grade educational visualization** makes LTQG concept
 - **Academic Conferences**: Live demonstrations and poster presentations
 - **Self-Guided Learning**: Hands-on exploration of complex LTQG mathematics
 
-*First interactive LTQG demonstration tool - making quantum gravity concepts accessible!*
+*Novel interactive LTQG demonstration tool - making σ-additivity and asymptotic silence concepts accessible!*
 
 ## 🎯 What is LTQG?
 
@@ -93,7 +93,25 @@ Implementation of all figures from the LTQG paper:
 - **Early Universe Signatures**: CMB predictions with LTQG modifications
 - **Clock Transport Loops**: Path-dependent quantum phase accumulation
 
-## 🚀 Quick Start
+## � Assumptions & Limitations
+
+### 🔍 **Key Assumptions**
+> **Order-of-magnitude sensitivity estimates based on current detector performance**
+
+- **Curvature Scaling**: Assumes R ∝ τ^(-n) near singularities for collapse models (e.g., R ~ τ^(-6) for black holes)
+- **Protocol Dependence**: Deviations appear only under σ-uniform (not τ-uniform) measurement procedures  
+- **Integration Times**: Based on feasible experimental durations and phase accumulation rates
+- **Detector Performance**: Sensitivity numbers extrapolated from current interferometry capabilities
+- **Foliation Choice**: Requires specific spacetime slicing for practical σ-coordinate implementation
+
+### ⚠️ **Current Limitations**
+- **Dynamical Regularization**: Evolution slows/halts but curvature invariants still diverge geometrically
+- **Protocol Specific**: Observable deviations only under carefully designed σ-uniform procedures
+- **Experimental Validation**: Awaiting precision interferometry tests for empirical verification  
+- **Theoretical Extensions**: Integration with other quantum gravity approaches remains open
+- **Computational Complexity**: Full numerical simulations require significant computational resources
+
+## �🚀 Quick Start
 
 ### Installation
 ```bash

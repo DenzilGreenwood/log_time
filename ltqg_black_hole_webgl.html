@@ -17,7 +17,7 @@
     .control-section h3 { font-size: 16px; color: #4fc3f7; margin-bottom: 12px; font-weight: 600; }
     .control-group { margin-bottom: 15px; }
     .control-group label { display: block; font-size: 13px; color: #e8eaed; margin-bottom: 5px; font-weight: 500; }
-    .slider { width: 100%; height: 6px; border-radius: 3px; background: #333; outline: none; -webkit-appearance: none; }
+    .slider { width: 100%; height: 6px; border-radius: 3px; background: #333; outline: none; -webkit-appearance: none; appearance: none; }
     .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #4fc3f7; cursor: pointer; box-shadow: 0 2px 6px rgba(79, 195, 247, 0.4); }
     .slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #4fc3f7; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(79, 195, 247, 0.4); }
     .button { background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%); border: none; border-radius: 8px; color: white; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-right: 8px; margin-bottom: 8px; }
@@ -579,8 +579,12 @@
       
       const cam = directionalLight.shadow.camera; // OrthographicCamera
       const s = Math.max(radius * 1.8, params.rMax * 1.5);
-      cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s; 
-      cam.near = 0.1; cam.far = radius*6 + 60; 
+      
+      // Enhanced frustum padding to prevent clipping artifacts
+      const pad = 1.25;
+      cam.left = -s*pad; cam.right = s*pad; cam.top = s*pad; cam.bottom = -s*pad;
+      cam.near = Math.min(0.1, s*0.01);
+      cam.far = radius*8 + 80;
       cam.updateProjectionMatrix();
       
       // Toggle casting/receiving based on UI
@@ -768,7 +772,12 @@
       renderer.render(scene, camera); 
     }
 
-    function onWindowResize(){ camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); fitShadowFrustum(); }
+    function onWindowResize(){ 
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight; 
+      camera.updateProjectionMatrix(); 
+      fitShadowFrustum(); // Re-fit shadow frustum on resize
+    }
 
     window.addEventListener('load', init);
   </script>
