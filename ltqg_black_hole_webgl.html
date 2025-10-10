@@ -427,6 +427,7 @@
       updateTauReadout();
       updateInstruments();
       updateAdditivityDemo();
+      updateViewMode(); // Initialize view mode
 
       // Start animation
       animate(); document.getElementById('loading').style.display = 'none';
@@ -576,9 +577,9 @@
 
     function setupControls(){
       document.getElementById('playBtn').addEventListener('click', ()=>{ isPlaying = !isPlaying; const btn = document.getElementById('playBtn'); btn.textContent = isPlaying ? '⏸️ Pause' : '▶️ Play'; btn.className = isPlaying ? 'button active' : 'button'; });
-      document.getElementById('resetBtn').addEventListener('click', ()=>{ params.sigma = 0; currentSigma = 0; document.getElementById('sigmaSlider').value = 0; document.getElementById('sigmaValue').textContent = 'σ = 0.0'; updateVisualization(); });
+      document.getElementById('resetBtn').addEventListener('click', ()=>{ params.sigma = 0; currentSigma = 0; document.getElementById('sigmaSlider').value = 0; document.getElementById('sigmaValue').textContent = 'σ = 0.0'; updateVisualization(); updateTauReadout(); updateInstruments(); });
       document.getElementById('speedSlider').addEventListener('input', (e)=>{ params.animationSpeed = parseFloat(e.target.value); document.getElementById('speedValue').textContent = `Speed: ${params.animationSpeed}`; });
-      document.getElementById('sigmaSlider').addEventListener('input', (e)=>{ params.sigma = parseFloat(e.target.value); currentSigma = params.sigma; document.getElementById('sigmaValue').textContent = `σ = ${params.sigma.toFixed(1)}`; updateVisualization(); });
+      document.getElementById('sigmaSlider').addEventListener('input', (e)=>{ params.sigma = parseFloat(e.target.value); currentSigma = params.sigma; document.getElementById('sigmaValue').textContent = `σ = ${params.sigma.toFixed(1)}`; updateVisualization(); updateTauReadout(); updateInstruments(); });
       document.getElementById('horizonSlider').addEventListener('input', (e)=>{ params.rs = parseFloat(e.target.value); document.getElementById('horizonValue').textContent = `rs = ${params.rs.toFixed(1)}`; updateVisualization(); });
       document.getElementById('depthSlider').addEventListener('input', (e)=>{ params.kappa = parseFloat(e.target.value); document.getElementById('depthValue').textContent = `κ = ${params.kappa.toFixed(1)}`; updateVisualization(); });
       document.getElementById('wireframeBtn').addEventListener('click', (e)=>{ params.wireframe = !params.wireframe; e.target.className = params.wireframe ? 'button active' : 'button'; updateVisualization(); });
@@ -680,15 +681,51 @@
     }
 
     function updateViewMode() {
+      const legend = document.getElementById('legend');
+      const additivityPanel = document.getElementById('additivity-panel');
+      
       if (params.standardView) {
-        // Standard GR view: disable logarithmic effects
-        const note = document.querySelector('.ltqg-note');
-        if (note) note.style.opacity = '0.3';
+        // Standard GR view: disable LTQG-specific features
+        if (legend) {
+          const subtitle = legend.querySelector('h3');
+          if (subtitle) subtitle.innerHTML = '⚖️ Standard GR Physics <div id="legend-color-bar"></div>';
+        }
+        if (additivityPanel) additivityPanel.style.opacity = '0.5';
+        
+        // Update legend content for standard view
+        const legendList = legend.querySelector('ul');
+        if (legendList) {
+          legendList.innerHTML = `
+            <li><span class="legend-bullet"></span>Classical black hole horizon</li>
+            <li><span class="legend-bullet"></span>Geodesic follows standard τ-time</li>
+            <li><span class="legend-bullet"></span>Funnel depth varies with σ</li>
+            <li><span class="legend-bullet"></span>Standard general relativity</li>
+            <li><span class="legend-bullet"></span>No logarithmic time effects</li>
+          `;
+        }
       } else {
         // LTQG view: enable logarithmic effects
-        const note = document.querySelector('.ltqg-note');
-        if (note) note.style.opacity = '1.0';
+        if (legend) {
+          const subtitle = legend.querySelector('h3');
+          if (subtitle) subtitle.innerHTML = '🔬 LTQG Physics <div id="legend-color-bar"></div>';
+        }
+        if (additivityPanel) additivityPanel.style.opacity = '1.0';
+        
+        // Restore original LTQG legend content
+        const legendList = legend.querySelector('ul');
+        if (legendList) {
+          legendList.innerHTML = `
+            <li><span class="legend-bullet"></span>Horizon becomes regular in σ-coordinates</li>
+            <li><span class="legend-bullet"></span>Singularity → asymptotic silence (σ → -∞)</li>
+            <li><span class="legend-bullet"></span>Funnel depth ∝ exp(-σ/κ)</li>
+            <li><span class="legend-bullet"></span>Geodesics smoothly approach σ = -∞</li>
+            <li><span class="legend-bullet"></span>No finite-time singularity crashes</li>
+          `;
+        }
       }
+      
+      // Update color bar after changing legend content
+      updateLegend();
     }
 
     function updateLegend(){ const colorBar=document.getElementById('legend-color-bar'); const schemeInfo=document.getElementById('legend-scheme-info'); const colorData=colorSchemes[params.colorScheme]; if(colorBar && colorData){ colorBar.style.background=colorData.gradient; } if(schemeInfo && colorData){ schemeInfo.textContent = `Current: ${colorData.name}`; } const root=document.documentElement; if(colorData && colorData.colors){ for(let i=0;i<Math.min(5,colorData.colors.length);i++){ const color=colorData.colors[i]; const hex=`#${color.getHexString()}`; root.style.setProperty(`--color-${i+1}`, hex); } if(colorData.colors.length<5){ const last=`#${colorData.colors[colorData.colors.length-1].getHexString()}`; for(let i=colorData.colors.length;i<5;i++){ root.style.setProperty(`--color-${i+1}`, last); } } } }
@@ -721,6 +758,8 @@
         createFunnel(); 
         createGeodesic(); 
         fitShadowFrustum(); 
+        updateTauReadout();
+        updateInstruments();
       }
       
       // Geodesic particle animation (always runs when visible)
