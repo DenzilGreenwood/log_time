@@ -61,6 +61,8 @@ Implementation of all figures from the LTQG paper:
 4. **Effective Generator**: Asymptotic silence condition
 5. **Zeno Protocols**: σ-uniform vs τ-uniform predictions
 6. **Early Universe**: Mode evolution without trans-Planckian problems
+7. **Black Hole Embedding**: 3D visualization of LTQG geometry near horizons
+8. **Interactive WebGL Demo**: Real-time 3D black hole with animation controls
 
 ### 🧪 Experimental Protocols
 - **σ-Uniform Zeno/Anti-Zeno Protocols**: Testing quantum measurement under gravitational redshift
@@ -96,6 +98,15 @@ python ltqg_demo.py --experiments-only
 ```bash
 # Launch Jupyter notebook
 jupyter notebook LTQG_Educational_Notebook.ipynb
+```
+
+### WebGL Black Hole Demo
+```bash
+# Launch interactive 3D visualization
+python launch_webgl_demo.py
+
+# Complete black hole visualization showcase
+python showcase_black_hole_complete.py
 ```
 
 ## 📊 Example Usage
@@ -218,6 +229,13 @@ Running the demonstration generates:
 - `zeno_protocol_predictions.png` - Experimental protocols
 - `early_universe_modes.png` - Cosmological evolution
 - `experimental_feasibility.png` - Implementation assessment
+- `black_hole_embedding.png` - 3D black hole geometry in log-time coordinates
+- `black_hole_embedding_enhanced.png` - Enhanced black hole with rotational symmetry and geodesics
+
+### Interactive Demonstrations
+- `ltqg_black_hole_webgl.html` - Real-time 3D WebGL visualization with controls
+- `launch_webgl_demo.py` - Python launcher for WebGL demo
+- `showcase_black_hole_complete.py` - Complete demonstration of all black hole visualizations
 
 ### Analysis Reports
 - Comprehensive experimental feasibility assessment

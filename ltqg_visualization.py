@@ -16,6 +16,8 @@ Figures implemented:
 4. Effective Generator and Asymptotic Silence
 5. σ-Uniform Zeno Protocol Predictions
 6. Early-Universe Mode Evolution
+7. Black Hole Embedding in Log-Time Coordinates (3D)
+8. Enhanced Black Hole with Rotational Symmetry and Geodesics
 """
 
 import os
@@ -635,6 +637,282 @@ class LTQGVisualizer:
         
         return fig
     
+    def figure_black_hole_embedding(self, save: bool = True, enhanced: bool = False) -> plt.Figure:
+        """
+        Black Hole Visualization: 3D Embedding of Log-Time Geometry
+        
+        Shows the 3D embedding of Schwarzschild spacetime in log-time coordinates,
+        demonstrating how the log-time transformation affects the geometry near
+        the event horizon and singularity.
+        
+        Args:
+            save: Whether to save the figure
+            enhanced: Whether to create enhanced version with rotational symmetry
+        """
+        from mpl_toolkits.mplot3d import Axes3D
+        
+        if enhanced:
+            return self._figure_black_hole_enhanced(save)
+        
+        # Parameters
+        r_s = 1.0       # Schwarzschild radius
+        tau0 = 1e-43    # Planck time (reference)
+        sigma = np.linspace(-5, 3, 400)
+        r = np.linspace(r_s * 1.001, 6 * r_s, 400)
+        
+        # Create meshgrid
+        R, S = np.meshgrid(r, sigma)
+        
+        # Define embedding height z(r, sigma)
+        # Simplified log-time curvature model
+        Z = np.sqrt((R / r_s - 1)) * np.exp(-S / 5)
+        
+        # Optional color map: log-time
+        color_map = plt.cm.plasma((S - S.min()) / (S.max() - S.min()))
+        
+        fig = plt.figure(figsize=(12, 10))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Surface plot
+        surf = ax.plot_surface(R, Z, S, facecolors=color_map, 
+                              rstride=4, cstride=4, linewidth=0, 
+                              antialiased=True, alpha=0.8)
+        
+        # Add horizon line
+        r_horizon = np.ones_like(sigma) * r_s
+        z_horizon = np.zeros_like(sigma)
+        ax.plot(r_horizon, z_horizon, sigma, 'r-', linewidth=4, 
+                label='Event Horizon r = rs')
+        
+        # Add asymptotic silence region
+        sigma_silence = sigma[sigma < -2]
+        r_silence = np.ones_like(sigma_silence) * 2 * r_s
+        z_silence = np.sqrt((r_silence / r_s - 1)) * np.exp(-sigma_silence / 5)
+        ax.plot(r_silence, z_silence, sigma_silence, 'k--', linewidth=3,
+                label='Asymptotic Silence Region')
+        
+        # Formatting
+        ax.set_xlabel('r / rs (Radius)', fontsize=12)
+        ax.set_ylabel('Embedding z', fontsize=12)
+        ax.set_zlabel('σ (Log-Time)', fontsize=12)
+        ax.set_title('Log-Time Black Hole Geometry (LTQG View)', fontsize=14, pad=20)
+        
+        # Add colorbar
+        mappable = plt.cm.ScalarMappable(cmap=plt.cm.plasma)
+        mappable.set_array(S)
+        cbar = fig.colorbar(mappable, ax=ax, shrink=0.6, pad=0.1)
+        cbar.set_label('Log-Time σ', fontsize=12)
+        
+        # Set viewing angle for better visualization
+        ax.view_init(elev=20, azim=45)
+        
+        # Add legend
+        ax.legend(loc='upper left', bbox_to_anchor=(0, 0.8))
+        
+        # Add text annotation
+        ax.text2D(0.02, 0.98, 
+                 "LTQG Prediction:\n• Smooth geometry in σ-coordinates\n• Horizon becomes regular\n• Asymptotic silence at σ → -∞", 
+                 transform=ax.transAxes, fontsize=10, verticalalignment='top',
+                 bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        if save:
+            self.save_figure(fig, "black_hole_embedding.png")
+        
+        return fig
+    
+    def _figure_black_hole_enhanced(self, save: bool = True) -> plt.Figure:
+        """
+        Enhanced Black Hole Visualization with Rotational Symmetry and Geodesics
+        
+        Implements the refinements suggested by Denzil:
+        1. 360° rotational symmetry for intuitive black hole representation
+        2. Curvature intensity overlay
+        3. Observer geodesic path showing regularized infall
+        4. Enhanced scientific annotations
+        """
+        from mpl_toolkits.mplot3d import Axes3D
+        
+        # Parameters
+        r_s = 1.0       # Schwarzschild radius
+        sigma = np.linspace(-6, 3, 300)
+        r = np.linspace(r_s * 1.001, 5 * r_s, 200)
+        phi = np.linspace(0, 2*np.pi, 60)  # Azimuthal angle for rotational symmetry
+        
+        # Create cylindrical coordinates for rotational symmetry
+        R, S = np.meshgrid(r, sigma)
+        Z = np.sqrt((R / r_s - 1)) * np.exp(-S / 4)  # Embedding height
+        
+        # Convert to Cartesian for full 3D rotational surface
+        PHI, R_cyl = np.meshgrid(phi, r)
+        SIGMA_cyl = np.zeros_like(PHI) + 1.0  # Mid-level σ slice for demonstration
+        Z_cyl = np.sqrt((R_cyl / r_s - 1)) * np.exp(-SIGMA_cyl / 4)
+        
+        X_cyl = R_cyl * np.cos(PHI)
+        Y_cyl = R_cyl * np.sin(PHI)
+        
+        fig = plt.figure(figsize=(15, 12))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Main cross-section surface (enhanced with curvature)
+        # Curvature intensity: higher near horizon
+        curvature_intensity = 1.0 / ((R / r_s - 1)**2 + 0.01)  # Regularized 1/(r-rs)²
+        curvature_normalized = (curvature_intensity - curvature_intensity.min()) / \
+                              (curvature_intensity.max() - curvature_intensity.min())
+        
+        # Color map combining σ-time and curvature
+        color_sigma = (S - S.min()) / (S.max() - S.min())
+        color_combined = 0.7 * color_sigma + 0.3 * curvature_normalized
+        color_map = plt.cm.plasma(color_combined)
+        
+        # Main surface plot
+        surf = ax.plot_surface(R, Z, S, facecolors=color_map, 
+                              rstride=3, cstride=3, linewidth=0.5, 
+                              antialiased=True, alpha=0.85)
+        
+        # Add rotational symmetry hint with circular cross-sections
+        for sigma_val in [-4, -2, 0, 2]:
+            if sigma_val >= sigma.min() and sigma_val <= sigma.max():
+                z_level = np.sqrt((r / r_s - 1)) * np.exp(-sigma_val / 4)
+                # Draw circles at different σ levels
+                theta_circle = np.linspace(0, 2*np.pi, 50)
+                for r_val in [1.5*r_s, 2*r_s, 3*r_s]:
+                    x_circle = r_val * np.cos(theta_circle)
+                    y_circle = r_val * np.sin(theta_circle)
+                    z_circle = np.ones_like(theta_circle) * np.sqrt((r_val / r_s - 1)) * np.exp(-sigma_val / 4)
+                    sigma_circle = np.ones_like(theta_circle) * sigma_val
+                    ax.plot(x_circle, y_circle, sigma_circle, 'gray', alpha=0.3, linewidth=1)
+        
+        # Event horizon (full rotational surface)
+        theta_horizon = np.linspace(0, 2*np.pi, 100)
+        sigma_horizon = np.linspace(-5, 3, 100)
+        THETA_h, SIGMA_h = np.meshgrid(theta_horizon, sigma_horizon)
+        X_horizon = r_s * np.cos(THETA_h)
+        Y_horizon = r_s * np.sin(THETA_h)
+        Z_horizon = np.zeros_like(THETA_h)
+        
+        ax.plot_surface(X_horizon, Y_horizon, SIGMA_h, alpha=0.3, color='red', 
+                       label='Event Horizon')
+        
+        # Add horizon circle at σ = 0 level
+        x_h = r_s * np.cos(theta_horizon)
+        y_h = r_s * np.sin(theta_horizon)
+        z_h = np.zeros_like(theta_horizon)
+        ax.plot(x_h, y_h, z_h, 'r-', linewidth=4, label='Event Horizon r = rs')
+        
+        # Observer geodesic: infalling particle path
+        # Geodesic in LTQG: asymptotically slows in σ but never reaches singularity
+        tau_geodesic = np.logspace(-4, 2, 100)  # Proper time along geodesic
+        sigma_geodesic = np.log(tau_geodesic)    # Log-time coordinate
+        
+        # Radial infall (simplified): starts at r = 4rs, falls toward horizon
+        r_geodesic = r_s * (1 + 3 * np.exp(-tau_geodesic/10))  # Asymptotic approach
+        
+        # Choose φ = 0 plane for geodesic
+        x_geodesic = r_geodesic
+        y_geodesic = np.zeros_like(r_geodesic)
+        z_geodesic = np.sqrt((r_geodesic / r_s - 1)) * np.exp(-sigma_geodesic / 4)
+        
+        # Only plot geodesic where it makes physical sense
+        valid_geodesic = (r_geodesic > r_s) & (sigma_geodesic > -5) & (sigma_geodesic < 3)
+        ax.plot(x_geodesic[valid_geodesic], z_geodesic[valid_geodesic], 
+                sigma_geodesic[valid_geodesic], 'lime', linewidth=4, 
+                label='Observer Geodesic (Regularized Infall)')
+        
+        # Mark start and asymptotic end of geodesic
+        if np.any(valid_geodesic):
+            start_idx = np.where(valid_geodesic)[0][0]
+            ax.scatter([x_geodesic[start_idx]], [z_geodesic[start_idx]], 
+                      [sigma_geodesic[start_idx]], color='lime', s=100, 
+                      marker='o', label='Geodesic Start')
+        
+        # Asymptotic silence boundary
+        sigma_silence = np.linspace(-6, -3, 50)
+        r_silence_vals = [1.2*r_s, 2*r_s, 3*r_s]
+        for r_sil in r_silence_vals:
+            z_silence = np.sqrt((r_sil / r_s - 1)) * np.exp(-sigma_silence / 4)
+            ax.plot([r_sil]*len(sigma_silence), z_silence, sigma_silence, 
+                    'k--', linewidth=2, alpha=0.7)
+        
+        # Formatting with enhanced labels
+        ax.set_xlabel('r / rs (Radius)', fontsize=14, labelpad=10)
+        ax.set_ylabel('Embedding Height z', fontsize=14, labelpad=10)
+        ax.set_zlabel('σ (Log-Time)', fontsize=14, labelpad=10)
+        ax.set_title('Enhanced LTQG Black Hole: Rotational Symmetry & Geodesics', 
+                    fontsize=16, pad=25)
+        
+        # Enhanced colorbar
+        mappable = plt.cm.ScalarMappable(cmap=plt.cm.plasma)
+        mappable.set_array(color_combined.flatten())
+        cbar = fig.colorbar(mappable, ax=ax, shrink=0.6, pad=0.12)
+        cbar.set_label('Combined σ-Time & Curvature Intensity', fontsize=12)
+        
+        # Optimal viewing angle
+        ax.view_init(elev=25, azim=30)
+        
+        # Enhanced legend
+        ax.legend(loc='upper left', bbox_to_anchor=(-0.1, 0.9), fontsize=11)
+        
+        # Scientific caption as annotation
+        caption_text = """Figure: Log-Time Quantum Gravity Black Hole Geometry
+        
+The Schwarzschild singularity at r = 0 is replaced by smooth, 
+logarithmically extended geometry in σ-coordinates.
+
+Key Features:
+• Proper time compression → additive σ-shift
+• Curvature regularization through asymptotic silence  
+• Observer geodesics asymptotically slow but never reach σ = -∞
+• Rotational symmetry preserved in LTQG coordinates"""
+        
+        ax.text2D(0.02, 0.02, caption_text,
+                 transform=ax.transAxes, fontsize=9, verticalalignment='bottom',
+                 bbox=dict(boxstyle="round,pad=0.5", facecolor="white", alpha=0.9))
+        
+        # Set axis limits for better view
+        ax.set_xlim(0.5, 5)
+        ax.set_ylim(0, 3)
+        ax.set_zlim(-6, 3)
+        
+        if save:
+            self.save_figure(fig, "black_hole_embedding_enhanced.png")
+        
+        return fig
+    
+    def launch_webgl_black_hole(self) -> bool:
+        """
+        Launch the interactive WebGL black hole visualization in a web browser.
+        
+        This opens a 3D interactive demonstration with real-time σ-time animation,
+        mouse/touch controls, and adjustable parameters.
+        
+        Returns:
+            bool: True if launched successfully, False otherwise
+        """
+        try:
+            import subprocess
+            import os
+            
+            # Find the launcher script
+            launcher_path = os.path.join(os.path.dirname(__file__), "launch_webgl_demo.py")
+            
+            if not os.path.exists(launcher_path):
+                print("❌ WebGL launcher not found. Please ensure launch_webgl_demo.py exists.")
+                return False
+            
+            print("🚀 Launching interactive WebGL black hole visualization...")
+            
+            # Launch in a separate process so it doesn't block
+            subprocess.Popen([
+                "python", launcher_path
+            ], cwd=os.path.dirname(__file__))
+            
+            print("✅ WebGL demo launched! Check your web browser.")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to launch WebGL demo: {e}")
+            return False
+    
     def generate_all_figures(self, save: bool = True) -> Dict[str, plt.Figure]:
         """
         Generate all LTQG figures described in the paper.
@@ -670,6 +948,12 @@ class LTQGVisualizer:
         figures['experimental_feasibility'] = self.figure_experimental_feasibility(save)
         print("✓ Bonus: Experimental Feasibility")
         
+        figures['black_hole_embedding'] = self.figure_black_hole_embedding(save)
+        print("✓ Bonus: Black Hole Embedding")
+        
+        figures['black_hole_enhanced'] = self.figure_black_hole_embedding(save, enhanced=True)
+        print("✓ Bonus: Enhanced Black Hole (Rotational + Geodesics)")
+        
         if save:
             print(f"\nAll figures saved to: {self.save_dir}/")
         
@@ -684,11 +968,28 @@ def quick_demo():
     # Create visualizer
     visualizer = LTQGVisualizer(save_dir="figs", dpi=300)
     
-    # Generate one example figure
-    fig = visualizer.figure_1_log_time_map(save=True)
+    # Generate example figures
+    print("Generating Log-Time Map...")
+    fig1 = visualizer.figure_1_log_time_map(save=True)
+    
+    print("Generating Black Hole Embedding...")
+    fig2 = visualizer.figure_black_hole_embedding(save=True)
+    
+    # Show both figures
     plt.show()
     
-    print("Demo complete! Check the 'figs' directory for output.")
+    # Offer to launch WebGL demo
+    print("\nDemo complete! Check the 'figs' directory for output.")
+    print("Generated:")
+    print("• Log-Time Map (fundamental transformation)")
+    print("• Black Hole Embedding (3D geometry visualization)")
+    
+    try:
+        response = input("\n🌐 Would you like to launch the interactive WebGL black hole demo? (y/n): ").strip().lower()
+        if response in ['y', 'yes']:
+            visualizer.launch_webgl_black_hole()
+    except (KeyboardInterrupt, EOFError):
+        pass
 
 
 if __name__ == "__main__":

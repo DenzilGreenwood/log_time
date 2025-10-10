@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LTQG Black Hole — Interactive WebGL</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%); color: #e8eaed; overflow: hidden; }
+    #container { position: relative; width: 100vw; height: 100vh; }
+    #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    #header { position: absolute; top: 0; left: 0; right: 0; height: 60px; background: rgba(15, 20, 25, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; padding: 0 20px; z-index: 1000; }
+    #title { font-size: 20px; font-weight: 600; color: #4fc3f7; }
+    #subtitle { margin-left: 15px; font-size: 14px; color: #9e9e9e; }
+    #controls { position: absolute; top: 80px; right: 20px; width: 320px; background: rgba(20, 25, 35, 0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 20px; z-index: 1000; max-height: calc(100vh - 120px); overflow-y: auto; }
+    .control-section { margin-bottom: 25px; }
+    .control-section h3 { font-size: 16px; color: #4fc3f7; margin-bottom: 12px; font-weight: 600; }
+    .control-group { margin-bottom: 15px; }
+    .control-group label { display: block; font-size: 13px; color: #e8eaed; margin-bottom: 5px; font-weight: 500; }
+    .slider { width: 100%; height: 6px; border-radius: 3px; background: #333; outline: none; -webkit-appearance: none; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #4fc3f7; cursor: pointer; box-shadow: 0 2px 6px rgba(79, 195, 247, 0.4); }
+    .slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #4fc3f7; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(79, 195, 247, 0.4); }
+    .button { background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%); border: none; border-radius: 8px; color: white; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-right: 8px; margin-bottom: 8px; }
+    .button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3); }
+    .button.active { background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%); }
+    .button.danger { background: linear-gradient(135deg, #e57373 0%, #ef5350 100%); }
+    .color-picker { width: 100%; height: 40px; border: 2px solid rgba(79, 195, 247, 0.3); border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.1); }
+    .color-picker:hover { border-color: rgba(79, 195, 247, 0.6); }
+    .value-display { background: rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 8px 12px; font-family: 'Courier New', monospace; font-size: 13px; color: #4fc3f7; margin-top: 5px; }
+    #legend { position: absolute; bottom: 20px; left: 20px; background: rgba(20, 25, 35, 0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 20px; max-width: 450px; z-index: 1000; }
+    #legend h3 { color: #4fc3f7; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    #legend-color-bar { height: 8px; width: 150px; border-radius: 4px; background: linear-gradient(to right, #2a1459, #7b2982, #c52e7d, #ff7a18, #ffe06a); border: 1px solid rgba(255, 255, 255, 0.2); }
+    #legend ul { list-style: none; padding: 0; margin-top: 15px; }
+    #legend li { padding: 6px 0; font-size: 13px; color: #b0b0b0; line-height: 1.4; display: flex; align-items: center; gap: 8px; }
+    #legend li .legend-bullet { width: 8px; height: 8px; border-radius: 50%; background: #4fc3f7; flex-shrink: 0; transition: background-color 0.3s ease; }
+    #legend li:nth-child(1) .legend-bullet { background: var(--color-1, #4fc3f7); }
+    #legend li:nth-child(2) .legend-bullet { background: var(--color-2, #4fc3f7); }
+    #legend li:nth-child(3) .legend-bullet { background: var(--color-3, #4fc3f7); }
+    #legend li:nth-child(4) .legend-bullet { background: var(--color-4, #4fc3f7); }
+    #legend li:nth-child(5) .legend-bullet { background: var(--color-5, #4fc3f7); }
+    #legend-scheme-info { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+    #credit { position: absolute; bottom: 20px; right: 20px; font-size: 11px; color: #666; z-index: 1000; }
+    #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 2000; }
+    .spinner { border: 3px solid rgba(79, 195, 247, 0.3); border-top: 3px solid #4fc3f7; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @media (max-width: 768px) { #controls { width: 280px; right: 10px; top: 70px; } #legend { display: none; } }
+    /* tiny test/diag badge */
+    #diag { position:absolute; left: 12px; top: 70px; font: 12px/1.3 system-ui; color:#9bf6a9; background: rgba(20,25,35,.65); border: 1px solid rgba(255,255,255,.12); padding:6px 8px; border-radius:8px; z-index:1000; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="loading"><div class="spinner"></div><div>Loading LTQG Black Hole Visualization...</div></div>
+    <div id="header"><div id="title">Log-Time Black Hole Geometry</div><div id="subtitle">Interactive LTQG Visualization with σ-time Evolution</div></div>
+    <div id="canvas-container"></div>
+
+    <div id="controls">
+      <div class="control-section">
+        <h3>Animation</h3>
+        <div class="control-group">
+          <button id="playBtn" class="button active">⏸️ Pause</button>
+          <button id="resetBtn" class="button">🔄 Reset</button>
+        </div>
+        <div class="control-group">
+          <label for="speedSlider">Animation Speed</label>
+          <input type="range" id="speedSlider" class="slider" min="0.1" max="2.0" step="0.1" value="0.5">
+          <div id="speedValue" class="value-display">Speed: 0.5</div>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Log-Time (σ)</h3>
+        <div class="control-group">
+          <label for="sigmaSlider">σ Value</label>
+          <input type="range" id="sigmaSlider" class="slider" min="-6" max="4" step="0.1" value="0">
+          <div id="sigmaValue" class="value-display">σ = 0.0</div>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Geometry</h3>
+        <div class="control-group">
+          <label for="horizonSlider">Schwarzschild Radius (rs)</label>
+          <input type="range" id="horizonSlider" class="slider" min="0.5" max="4" step="0.1" value="2">
+          <div id="horizonValue" class="value-display">rs = 2.0</div>
+        </div>
+        <div class="control-group">
+          <label for="depthSlider">Funnel Depth Scale (κ)</label>
+          <input type="range" id="depthSlider" class="slider" min="1" max="10" step="0.5" value="4">
+          <div id="depthValue" class="value-display">κ = 4.0</div>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Visibility</h3>
+        <div class="control-group">
+          <button id="wireframeBtn" class="button">📐 Wireframe</button>
+          <button id="horizonBtn" class="button active">🔴 Horizon</button>
+          <button id="geodesicBtn" class="button active">🛸 Geodesic</button>
+          <button id="gridBtn" class="button active">📏 Grid</button>
+          <button id="shadowBtn" class="button active">🌗 Shadows</button>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Colors</h3>
+        <div class="control-group">
+          <label for="colorScheme">Color Scheme</label>
+          <select id="colorScheme" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+            <option value="plasma">Plasma (Purple→Orange→Yellow)</option>
+            <option value="viridis">Viridis (Purple→Blue→Green→Yellow)</option>
+            <option value="cool">Cool (Cyan→Blue→Purple)</option>
+            <option value="warm">Warm (Red→Orange→Yellow)</option>
+            <option value="grayscale">Grayscale</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="horizonColor">Horizon Color</label>
+          <input type="color" id="horizonColor" class="color-picker" value="#ff5050">
+        </div>
+        <div class="control-group">
+          <label for="geodesicColor">Geodesic Color</label>
+          <input type="color" id="geodesicColor" class="color-picker" value="#7cd2ff">
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Camera</h3>
+        <div class="control-group">
+          <button id="viewTopBtn" class="button">⬆️ Top</button>
+          <button id="viewSideBtn" class="button">➡️ Side</button>
+          <button id="view3DBtn" class="button active">🎯 3D</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="legend"><h3> LTQG Physics <div id="legend-color-bar"></div></h3>
+      <ul>
+        <li><span class="legend-bullet"></span>Horizon becomes regular in σ-coordinates</li>
+        <li><span class="legend-bullet"></span>Singularity → asymptotic silence (σ → -∞)</li>
+        <li><span class="legend-bullet"></span>Funnel depth ∝ exp(-σ/κ)</li>
+        <li><span class="legend-bullet"></span>Geodesics smoothly approach σ = -∞</li>
+        <li><span class="legend-bullet"></span>No finite-time singularity crashes</li>
+      </ul>
+      <div id="legend-scheme-info">Current: Plasma scheme</div>
+    </div>
+
+    <div id="credit">© 2025 LTQG Demo — Denzil J. Greenwood • Three.js WebGL</div>
+    <div id="diag" style="display:none"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    // Global variables
+    let scene, camera, renderer, controls;
+    let funnelMesh, horizonMesh, geodesicMesh, particleMesh, gridGroup;
+    let animationId; let isPlaying = true; let currentSigma = 0;
+    let directionalLight; // made global so we can refit the shadow frustum
+
+    const params = { sigma: 0, sigmaMin: -6, sigmaMax: 4, rs: 2.0, rMax: 12.0, kappa: 4.0, animationSpeed: 0.5, wireframe: false, showHorizon: true, showGeodesic: true, showGrid: true, showShadows: true, colorScheme: 'plasma', horizonColor: '#ff5050', geodesicColor: '#7cd2ff' };
+
+    // Color schemes with gradients for legend
+    const colorSchemes = { plasma: { colors:[ new THREE.Color(0x2a1459), new THREE.Color(0x7b2982), new THREE.Color(0xc52e7d), new THREE.Color(0xff7a18), new THREE.Color(0xffe06a) ], gradient:'linear-gradient(to right, #2a1459, #7b2982, #c52e7d, #ff7a18, #ffe06a)', name:'Plasma (Purple→Orange→Yellow)' }, viridis:{ colors:[ new THREE.Color(0x440154), new THREE.Color(0x31688e), new THREE.Color(0x35b779), new THREE.Color(0xfde725)], gradient:'linear-gradient(to right, #440154, #31688e, #35b779, #fde725)', name:'Viridis (Purple→Blue→Green→Yellow)' }, cool:{ colors:[ new THREE.Color(0x00ffff), new THREE.Color(0x0080ff), new THREE.Color(0x8000ff) ], gradient:'linear-gradient(to right, #00ffff, #0080ff, #8000ff)', name:'Cool (Cyan→Blue→Purple)' }, warm:{ colors:[ new THREE.Color(0xff0000), new THREE.Color(0xff8000), new THREE.Color(0xffff00) ], gradient:'linear-gradient(to right, #ff0000, #ff8000, #ffff00)', name:'Warm (Red→Orange→Yellow)' }, grayscale:{ colors:[ new THREE.Color(0x000000), new THREE.Color(0x808080), new THREE.Color(0xffffff) ], gradient:'linear-gradient(to right, #000000, #808080, #ffffff)', name:'Grayscale (Black→Gray→White)' } };
+
+    function init() {
+      const container = document.getElementById('canvas-container');
+      const diag = document.getElementById('diag');
+
+      // Scene / Camera / Renderer
+      scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x0f1419, 20, 80);
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000); camera.position.set(15, 10, 15);
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // Controls
+      controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = 0.05; controls.minDistance = 5; controls.maxDistance = 50;
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.6); scene.add(ambientLight);
+      directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(10, 10, 5);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.mapSize.width = 2048; directionalLight.shadow.mapSize.height = 2048;
+      // Important: soften/avoid acne and hard square cutoff
+      directionalLight.shadow.bias = -0.0005; // push shadow slightly off caster
+      directionalLight.shadow.normalBias = 0.02;
+      scene.add(directionalLight);
+      scene.add(directionalLight.target);
+
+      // Create initial geometry
+      createFunnel(); createHorizon(); createGeodesic(); createGrid();
+      fitShadowFrustum();
+
+      // Setup event listeners / legend
+      setupControls(); updateLegend();
+
+      // Start animation
+      animate(); document.getElementById('loading').style.display = 'none';
+
+      // ===== Runtime tests (added per instructions) =====
+      const tests = [];
+      const test = (name, fn) => { try { fn(); tests.push({ name, ok: true }); } catch (e) { tests.push({ name, ok: false, err: e.message }); } };
+      test('Renderer shadows enabled', () => { if (!renderer.shadowMap.enabled) throw new Error('shadows disabled'); });
+      test('Directional shadow frustum fits scene', () => {
+        const cam = directionalLight.shadow.camera; const s = Math.max(Math.abs(cam.left), Math.abs(cam.right), Math.abs(cam.top), Math.abs(cam.bottom)); if (s < params.rMax) throw new Error('shadow frustum too small');
+      });
+      diag.style.display = 'block'; diag.innerHTML = tests.map(t=> t.ok?`✅ ${t.name}`:`❌ ${t.name}: ${t.err}`).join(' · ');
+    }
+
+    function getColorForSigma(sigma, scheme='plasma') {
+      const colorData = colorSchemes[scheme]; const colors = colorData.colors; const t = Math.max(0, Math.min(1, (sigma - params.sigmaMin)/(params.sigmaMax - params.sigmaMin)));
+      if (colors.length === 2) return new THREE.Color().lerpColors(colors[0], colors[1], t);
+      if (colors.length > 2) { const seg = 1/(colors.length-1); const i = Math.min(colors.length-2, Math.floor(t/seg)); const lt = (t - i*seg)/seg; return new THREE.Color().lerpColors(colors[i], colors[i+1], lt); }
+      return colors[0].clone();
+    }
+
+    function createFunnel() {
+      if (funnelMesh) scene.remove(funnelMesh);
+      const rMin = params.rs*1.01, rMax = params.rMax, radialSegments=100, angularSegments=100;
+      const geometry = new THREE.BufferGeometry(); const positions=[], colors=[], indices=[];
+      for (let j=0;j<=angularSegments;j++){ const theta=j/angularSegments*Math.PI*2; for (let i=0;i<=radialSegments;i++){ const t=i/radialSegments; const r=rMin + t*(rMax-rMin); const zEmbed=Math.sqrt(Math.max(r/params.rs - 1, 0)); const z=zEmbed*Math.exp(-params.sigma/params.kappa)*5; const x=r*Math.cos(theta), y=r*Math.sin(theta); positions.push(x,z,y); const c=getColorForSigma(params.sigma, params.colorScheme); colors.push(c.r,c.g,c.b); } }
+      for (let j=0;j<angularSegments;j++){ for (let i=0;i<radialSegments;i++){ const a=i + j*(radialSegments+1); const b=i + (j+1)*(radialSegments+1); const c=(i+1)+(j+1)*(radialSegments+1); const d=(i+1)+ j*(radialSegments+1); indices.push(a,b,d, b,c,d); } }
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions,3)); geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors,3)); geometry.setIndex(indices); geometry.computeVertexNormals();
+      const material = new THREE.MeshPhongMaterial({ vertexColors:true, side:THREE.DoubleSide, wireframe:params.wireframe, transparent:true, opacity:0.9 });
+      funnelMesh = new THREE.Mesh(geometry, material); funnelMesh.receiveShadow = params.showShadows; funnelMesh.castShadow = params.showShadows; scene.add(funnelMesh);
+    }
+
+    function createHorizon() {
+      if (horizonMesh) scene.remove(horizonMesh);
+      const geometry = new THREE.CylinderGeometry(params.rs, params.rs, 8, 64, 1, true);
+      const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(params.horizonColor), transparent:true, opacity:0.3, side:THREE.DoubleSide });
+      horizonMesh = new THREE.Mesh(geometry, material); horizonMesh.position.y = 2; horizonMesh.visible = params.showHorizon; horizonMesh.castShadow = params.showShadows; scene.add(horizonMesh);
+    }
+
+    function createGeodesic() {
+      if (geodesicMesh) scene.remove(geodesicMesh); if (particleMesh) scene.remove(particleMesh);
+      const points=[]; const numPoints=200; for(let i=0;i<=numPoints;i++){ const t=i/numPoints; const r=params.rs*(4 - 3*t*t); const theta=t*Math.PI*2*1.5; const zEmbed=Math.sqrt(Math.max(r/params.rs - 1, 0)); const z=zEmbed*Math.exp(-params.sigma/params.kappa)*5; const x=r*Math.cos(theta), y=r*Math.sin(theta); points.push(new THREE.Vector3(x,z,y)); }
+      const curve=new THREE.CatmullRomCurve3(points); const tubeGeometry=new THREE.TubeGeometry(curve,100,0.02,8,false); const tubeMaterial=new THREE.MeshBasicMaterial({ color:new THREE.Color(params.geodesicColor), transparent:true, opacity:0.8 });
+      geodesicMesh = new THREE.Mesh(tubeGeometry, tubeMaterial); geodesicMesh.visible = params.showGeodesic; scene.add(geodesicMesh);
+      const particleGeometry = new THREE.SphereGeometry(0.08,16,16); const particleMaterial = new THREE.MeshBasicMaterial({ color:new THREE.Color(params.geodesicColor) }); particleMesh = new THREE.Mesh(particleGeometry, particleMaterial); particleMesh.visible = params.showGeodesic; particleMesh.userData.curve = curve; particleMesh.userData.t = 0; scene.add(particleMesh);
+    }
+
+    function createGrid() {
+      if (gridGroup) scene.remove(gridGroup); gridGroup = new THREE.Group();
+      const gridMaterial = new THREE.LineBasicMaterial({ color:0x444444, transparent:true, opacity:0.4 });
+      for (let r=params.rs; r<=params.rMax; r+=params.rs){ const points=[]; for(let i=0;i<=64;i++){ const theta=i/64*Math.PI*2; points.push(new THREE.Vector3(r*Math.cos(theta), 0, r*Math.sin(theta))); } const geometry=new THREE.BufferGeometry().setFromPoints(points); const line=new THREE.Line(geometry, gridMaterial); gridGroup.add(line); }
+      gridGroup.visible = params.showGrid; scene.add(gridGroup);
+    }
+
+    // === FIX: dynamically fit directionalLight shadow camera to cover the scene ===
+    function fitShadowFrustum(){
+      if (!directionalLight) return;
+      const box = new THREE.Box3();
+      if (funnelMesh) box.expandByObject(funnelMesh);
+      if (horizonMesh) box.expandByObject(horizonMesh);
+      if (gridGroup) box.expandByObject(gridGroup);
+      const center = new THREE.Vector3(); box.getCenter(center);
+      const radius = box.getSize(new THREE.Vector3()).length() * 0.5;
+      directionalLight.target.position.copy(center);
+      // place light so it looks towards center
+      directionalLight.position.set(center.x + radius*0.9, center.y + radius*1.2, center.z + radius*0.9);
+      const cam = directionalLight.shadow.camera; // OrthographicCamera
+      const s = Math.max(radius * 1.3, params.rMax * 1.2);
+      cam.left = -s; cam.right = s; cam.top = s; cam.bottom = -s; cam.near = 0.1; cam.far = radius*4 + 40; cam.updateProjectionMatrix();
+      // Toggle casting/receiving based on UI
+      if (funnelMesh) { funnelMesh.receiveShadow = params.showShadows; funnelMesh.castShadow = params.showShadows; }
+      if (horizonMesh) { horizonMesh.castShadow = params.showShadows; }
+      renderer.shadowMap.enabled = params.showShadows;
+    }
+
+    function setupControls(){
+      document.getElementById('playBtn').addEventListener('click', ()=>{ isPlaying = !isPlaying; const btn = document.getElementById('playBtn'); btn.textContent = isPlaying ? '⏸️ Pause' : '▶️ Play'; btn.className = isPlaying ? 'button active' : 'button'; });
+      document.getElementById('resetBtn').addEventListener('click', ()=>{ params.sigma = 0; currentSigma = 0; document.getElementById('sigmaSlider').value = 0; document.getElementById('sigmaValue').textContent = 'σ = 0.0'; updateVisualization(); });
+      document.getElementById('speedSlider').addEventListener('input', (e)=>{ params.animationSpeed = parseFloat(e.target.value); document.getElementById('speedValue').textContent = `Speed: ${params.animationSpeed}`; });
+      document.getElementById('sigmaSlider').addEventListener('input', (e)=>{ params.sigma = parseFloat(e.target.value); currentSigma = params.sigma; document.getElementById('sigmaValue').textContent = `σ = ${params.sigma.toFixed(1)}`; updateVisualization(); });
+      document.getElementById('horizonSlider').addEventListener('input', (e)=>{ params.rs = parseFloat(e.target.value); document.getElementById('horizonValue').textContent = `rs = ${params.rs.toFixed(1)}`; updateVisualization(); });
+      document.getElementById('depthSlider').addEventListener('input', (e)=>{ params.kappa = parseFloat(e.target.value); document.getElementById('depthValue').textContent = `κ = ${params.kappa.toFixed(1)}`; updateVisualization(); });
+      document.getElementById('wireframeBtn').addEventListener('click', (e)=>{ params.wireframe = !params.wireframe; e.target.className = params.wireframe ? 'button active' : 'button'; updateVisualization(); });
+      document.getElementById('horizonBtn').addEventListener('click', (e)=>{ params.showHorizon = !params.showHorizon; e.target.className = params.showHorizon ? 'button active' : 'button'; if (horizonMesh) horizonMesh.visible = params.showHorizon; });
+      document.getElementById('geodesicBtn').addEventListener('click', (e)=>{ params.showGeodesic = !params.showGeodesic; e.target.className = params.showGeodesic ? 'button active' : 'button'; if (geodesicMesh) geodesicMesh.visible = params.showGeodesic; if (particleMesh) particleMesh.visible = params.showGeodesic; });
+      document.getElementById('gridBtn').addEventListener('click', (e)=>{ params.showGrid = !params.showGrid; e.target.className = params.showGrid ? 'button active' : 'button'; if (gridGroup) gridGroup.visible = params.showGrid; });
+      document.getElementById('shadowBtn').addEventListener('click', (e)=>{ params.showShadows = !params.showShadows; e.target.className = params.showShadows ? 'button active' : 'button'; fitShadowFrustum(); });
+      document.getElementById('colorScheme').addEventListener('change', (e)=>{ params.colorScheme = e.target.value; updateVisualization(); });
+      document.getElementById('horizonColor').addEventListener('change', (e)=>{ params.horizonColor = e.target.value; if (horizonMesh) horizonMesh.material.color = new THREE.Color(params.horizonColor); });
+      document.getElementById('geodesicColor').addEventListener('change', (e)=>{ params.geodesicColor = e.target.value; if (geodesicMesh) geodesicMesh.material.color = new THREE.Color(params.geodesicColor); if (particleMesh) particleMesh.material.color = new THREE.Color(params.geodesicColor); });
+      document.getElementById('viewTopBtn').addEventListener('click', ()=>{ camera.position.set(0, 25, 0); controls.target.set(0,0,0); controls.update(); updateActiveViewButton('viewTopBtn'); });
+      document.getElementById('viewSideBtn').addEventListener('click', ()=>{ camera.position.set(25, 0, 0); controls.target.set(0,0,0); controls.update(); updateActiveViewButton('viewSideBtn'); });
+      document.getElementById('view3DBtn').addEventListener('click', ()=>{ camera.position.set(15, 10, 15); controls.target.set(0,0,0); controls.update(); updateActiveViewButton('view3DBtn'); });
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function updateActiveViewButton(activeId){ ['viewTopBtn','viewSideBtn','view3DBtn'].forEach(id=>{ const btn=document.getElementById(id); btn.className = id===activeId ? 'button active':'button'; }); }
+
+    function updateLegend(){ const colorBar=document.getElementById('legend-color-bar'); const schemeInfo=document.getElementById('legend-scheme-info'); const colorData=colorSchemes[params.colorScheme]; if(colorBar && colorData){ colorBar.style.background=colorData.gradient; } if(schemeInfo && colorData){ schemeInfo.textContent = `Current: ${colorData.name}`; } const root=document.documentElement; if(colorData && colorData.colors){ for(let i=0;i<Math.min(5,colorData.colors.length);i++){ const color=colorData.colors[i]; const hex=`#${color.getHexString()}`; root.style.setProperty(`--color-${i+1}`, hex); } if(colorData.colors.length<5){ const last=`#${colorData.colors[colorData.colors.length-1].getHexString()}`; for(let i=colorData.colors.length;i<5;i++){ root.style.setProperty(`--color-${i+1}`, last); } } } }
+
+    function updateVisualization(){ createFunnel(); createHorizon(); createGeodesic(); createGrid(); updateLegend(); fitShadowFrustum(); }
+
+    function animate(){ animationId = requestAnimationFrame(animate); if(isPlaying){ currentSigma += params.animationSpeed * 0.016; if(currentSigma > params.sigmaMax){ currentSigma = params.sigmaMin; } params.sigma = currentSigma; document.getElementById('sigmaSlider').value = params.sigma; document.getElementById('sigmaValue').textContent = `σ = ${params.sigma.toFixed(1)}`; createFunnel(); createGeodesic(); fitShadowFrustum(); }
+      if (particleMesh && particleMesh.userData.curve && params.showGeodesic){ particleMesh.userData.t += 0.005; if (particleMesh.userData.t > 1) particleMesh.userData.t = 0; const point = particleMesh.userData.curve.getPoint(particleMesh.userData.t); particleMesh.position.copy(point); }
+      controls.update(); renderer.render(scene, camera); }
+
+    function onWindowResize(){ camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); fitShadowFrustum(); }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

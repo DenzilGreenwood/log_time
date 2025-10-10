@@ -5,6 +5,69 @@ All notable changes to the Log-Time Quantum Gravity project will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-10-10
+
+### 🎓 Major Educational Features Release
+
+**RESEARCH-GRADE LTQG EDUCATIONAL TOOL COMPLETE**
+
+Transformed basic visualization into comprehensive teaching tool for Log-Time Quantum Gravity concepts.
+
+### Added
+
+#### Educational Framework
+- **σ-Additivity Demonstration Panel**
+  - Interactive dilation sliders (D_A, D_B) with real-time σ calculations
+  - Live mathematical display: σ = log(D_A) + log(D_B)
+  - Visual verification of D_A × D_B ↔ e^(σ_A + σ_B) equivalence
+  - Makes LTQG σ-additivity explicit and interactive
+
+- **Professional Instrument Panel**
+  - Real-time physics readouts: σ, τ = τ₀e^σ, 1/τ, e^(-σ), r_s, κ
+  - Grid-based instrument cluster with professional layout
+  - Sparkline visualization for 1/τ vs e^(-σ) analysis
+  - Quantitative validation builds student confidence
+
+- **Enhanced LTQG Controls**
+  - τ₀ reference time scale slider with live τ = τ₀e^σ calculation
+  - Standard vs LTQG paradigm comparison toggle
+  - Modular panel visibility controls
+  - Integrated physics annotations and explanations
+
+- **Asymptotic Silence Animation**
+  - Geodesic particle motion scaling by e^σ factor
+  - Demonstrates singularity freezing as σ → -∞
+  - Toggle between standard GR and LTQG motion behaviors
+  - Visual proof of asymptotic silence concept
+
+#### Technical Improvements
+- **Research-Grade UI Design**
+  - Dark professional theme suitable for academic presentations
+  - Responsive design scaling across display sizes
+  - Interactive legend with synchronized color mapping
+  - Clear visual feedback for all educational controls
+
+### Fixed
+- **JavaScript-HTML ID Synchronization**
+  - Corrected panel ID mismatches (additivity-panel, instrument-panel)
+  - Fixed slider ID references (tau0Slider, sigmaSlider, etc.)
+  - Aligned instrument readout IDs (instTau, instSigma, etc.)
+  - Resolved event listener connectivity issues
+
+- **Educational Panel Integration**
+  - Properly integrated HTML structure for all educational components
+  - Fixed toggle functionality for panel visibility
+  - Corrected real-time update synchronization
+  - Resolved parameter mapping inconsistencies
+
+### Educational Impact
+- **Target Audiences**: Graduate physics students, research groups, academic conferences
+- **Learning Objectives**: σ-additivity, asymptotic silence, coordinate transformations
+- **Academic Value**: First interactive LTQG demonstration tool
+- **Research Applications**: Conference demos, course integration, hypothesis testing
+
+---
+
 ## [1.0.0] - 2025-10-07
 
 ### 🎉 Initial Release
