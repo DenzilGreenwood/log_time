@@ -463,13 +463,15 @@ class QuantumProtocols:
         """
         Compare τ-uniform vs σ-uniform measurement protocols.
         
+        **UPDATED**: Now includes proper τ-weighting for σ-uniform averages.
+        
         Args:
             tau_range: (τ_start, τ_end) for measurements
             alpha: Gravitational redshift factor
             n_measurements: Number of measurements
             
         Returns:
-            Dictionary comparing both protocols
+            Dictionary comparing both protocols with proper weighting
         """
         tau_start, tau_end = tau_range
         
@@ -484,12 +486,116 @@ class QuantumProtocols:
         # Compute Zeno suppression
         zeno_factor = self.zeno_suppression_factor(alpha, n_measurements)
         
+        # **CRITICAL ADDITION**: Validate σ-uniform protocol with proper τ-weighting
+        validation_results = self.validate_sigma_uniform_protocol(
+            sigma_uniform, tau_uniform, sigma_start, sigma_end
+        )
+        
         return {
             'tau_uniform_times': tau_uniform,
             'sigma_uniform_times': sigma_uniform,
             'zeno_suppression': zeno_factor,
-            'protocol_difference': np.mean(np.abs(tau_uniform - sigma_uniform))
+            'protocol_difference': np.mean(np.abs(tau_uniform - sigma_uniform)),
+            'sigma_protocol_validation': validation_results
         }
+    
+    def validate_sigma_uniform_protocol(self, sigma_uniform_times: np.ndarray,
+                                      tau_uniform_times: np.ndarray,
+                                      sigma_start: float, sigma_end: float) -> dict:
+        """
+        Validate σ-uniform protocol implementation according to rigorous identities.
+        
+        This method checks:
+        1. Proper τ-weighting for σ-uniform averages
+        2. Cutoff dependence and reporting
+        3. Correct measure transformations
+        
+        Args:
+            sigma_uniform_times: σ-uniform measurement times (in τ)
+            tau_uniform_times: τ-uniform measurement times
+            sigma_start: Initial σ value
+            sigma_end: Final σ value
+            
+        Returns:
+            Dictionary with validation results and warnings
+        """
+        # Convert times to σ coordinates for analysis
+        sigma_coords = self.transform.sigma_from_tau(sigma_uniform_times)
+        tau_coords = sigma_uniform_times
+        
+        # Check 1: Verify exponential spacing in τ for σ-uniform protocol
+        tau_ratios = tau_coords[1:] / tau_coords[:-1]
+        expected_ratio = np.exp((sigma_end - sigma_start) / (len(sigma_coords) - 1))
+        spacing_error = np.std(tau_ratios) / np.mean(tau_ratios)
+        
+        # Check 2: Compute τ-weights for proper σ-uniform averaging
+        tau_weights = tau_coords  # dτ = τ dσ, so weight by τ
+        normalized_weights = tau_weights / np.sum(tau_weights)
+        
+        # Check 3: Assess cutoff sensitivity
+        sigma_min = np.min(sigma_coords)
+        tau_min = np.exp(sigma_min) * self.config.tau0
+        cutoff_sensitivity = abs(sigma_min) > 10  # Warn if |σ_min| > 10
+        
+        # Check 4: Compare weighted vs unweighted averages (demonstration)
+        # For a test observable O(τ) = τ^(-1) (example divergent quantity)
+        test_observable = 1.0 / tau_coords
+        
+        # Unweighted σ-average (INCORRECT for τ-defined observables)
+        unweighted_sigma_avg = np.mean(test_observable)
+        
+        # Properly weighted σ-average (CORRECT)
+        weighted_sigma_avg = np.sum(test_observable * normalized_weights)
+        
+        # τ-uniform average for comparison
+        tau_test_observable = 1.0 / tau_uniform_times
+        tau_avg = np.mean(tau_test_observable)
+        
+        # Relative errors
+        unweighted_error = abs(unweighted_sigma_avg - tau_avg) / abs(tau_avg) if tau_avg != 0 else np.inf
+        weighted_error = abs(weighted_sigma_avg - tau_avg) / abs(tau_avg) if tau_avg != 0 else np.inf
+        
+        return {
+            'spacing_error': spacing_error,
+            'expected_exponential_ratio': expected_ratio,
+            'tau_weights': normalized_weights,
+            'sigma_cutoff': sigma_min,
+            'tau_cutoff': tau_min,
+            'cutoff_sensitive': cutoff_sensitivity,
+            'test_observable_comparison': {
+                'tau_uniform_average': tau_avg,
+                'sigma_unweighted_average': unweighted_sigma_avg,
+                'sigma_weighted_average': weighted_sigma_avg,
+                'unweighted_relative_error': unweighted_error,
+                'weighted_relative_error': weighted_error
+            },
+            'validation_passed': spacing_error < 0.01 and weighted_error < unweighted_error,
+            'warnings': self._generate_protocol_warnings(cutoff_sensitivity, spacing_error, 
+                                                        unweighted_error, weighted_error)
+        }
+    
+    def _generate_protocol_warnings(self, cutoff_sensitive: bool, spacing_error: float,
+                                  unweighted_error: float, weighted_error: float) -> list:
+        """Generate warnings for σ-uniform protocol validation."""
+        warnings = []
+        
+        if cutoff_sensitive:
+            warnings.append("CUTOFF WARNING: σ_min < -10, results may be cutoff-dependent. "
+                          "Report σ_min explicitly in experimental protocol.")
+        
+        if spacing_error > 0.05:
+            warnings.append("SPACING WARNING: σ-uniform schedule has irregular τ-spacing. "
+                          "Check implementation of exponential time intervals.")
+        
+        if unweighted_error < weighted_error:
+            warnings.append("MEASURE WARNING: Unweighted σ-average outperforming weighted. "
+                          "This suggests a problem with the weighting implementation.")
+        
+        if weighted_error > 0.1:
+            warnings.append("ACCURACY WARNING: Weighted σ-average has >10% error compared to "
+                          "τ-uniform. Consider increasing measurement resolution.")
+        
+        return warnings
 
 
 class LTQGSimulator:
