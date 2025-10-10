@@ -186,29 +186,11 @@
       font-weight: bold;
     }
     
-    .sparkline-container {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      padding: 8px;
-    }
-    
-    .sparkline-label {
-      font-size: 10px;
-      color: #b0b0b0;
-      margin-bottom: 5px;
-    }
-    
-    #sparkline {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
     #credit { position: absolute; bottom: 20px; right: 20px; font-size: 11px; color: #666; z-index: 1000; }
     #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 2000; }
     .spinner { border: 3px solid rgba(79, 195, 247, 0.3); border-top: 3px solid #4fc3f7; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @media (max-width: 768px) { #controls { width: 280px; right: 10px; top: 70px; } #legend { display: none; } }
-    /* tiny test/diag badge */
-    #diag { position:absolute; left: 12px; top: 70px; font: 12px/1.3 system-ui; color:#9bf6a9; background: rgba(20,25,35,.65); border: 1px solid rgba(255,255,255,.12); padding:6px 8px; border-radius:8px; z-index:1000; }
   </style>
 </head>
 <body>
@@ -382,14 +364,9 @@
           <div class="value" id="instInvTau">1.0</div>
         </div>
       </div>
-      <div class="sparkline-container">
-        <div class="sparkline-label">1/τ vs e^(-σ) (Singularity Regularization)</div>
-        <canvas id="sparkline" width="200" height="40"></canvas>
-      </div>
     </div>
 
     <div id="credit">© 2025 LTQG Demo — Denzil J. Greenwood • Three.js WebGL</div>
-    <div id="diag" style="display:none"></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -415,7 +392,6 @@
 
     function init() {
       const container = document.getElementById('canvas-container');
-      const diag = document.getElementById('diag');
 
       // Scene / Camera / Renderer
       scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x0f1419, 20, 80);
@@ -454,15 +430,6 @@
 
       // Start animation
       animate(); document.getElementById('loading').style.display = 'none';
-
-      // ===== Runtime tests (added per instructions) =====
-      const tests = [];
-      const test = (name, fn) => { try { fn(); tests.push({ name, ok: true }); } catch (e) { tests.push({ name, ok: false, err: e.message }); } };
-      test('Renderer shadows enabled', () => { if (!renderer.shadowMap.enabled) throw new Error('shadows disabled'); });
-      test('Directional shadow frustum fits scene', () => {
-        const cam = directionalLight.shadow.camera; const s = Math.max(Math.abs(cam.left), Math.abs(cam.right), Math.abs(cam.top), Math.abs(cam.bottom)); if (s < params.rMax) throw new Error('shadow frustum too small');
-      });
-      diag.style.display = 'block'; diag.innerHTML = tests.map(t=> t.ok?`✅ ${t.name}`:`❌ ${t.name}: ${t.err}`).join(' · ');
     }
 
     function getColorForSigma(sigma, scheme='plasma') {
