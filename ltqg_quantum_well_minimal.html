@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LTQG — Quantum Well σ-Evolution (Canvas, No Deps)</title>
+<style>
+  :root { --bg:#0f1419; --panel:#151c28cc; --txt:#e8eaed; --accent:#89c2ff; }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  #wrap{display:grid;grid-template-columns:1fr;grid-template-rows:1fr;min-height:100vh}
+  #canvas{width:100%;height:100%;display:block;background:#0f1419}
+  #ui{position:fixed;top:12px;right:12px;width:360px;background:#151c28cc;border:1px solid #ffffff14;border-radius:12px;padding:12px 14px;backdrop-filter:blur(8px);box-shadow:0 12px 32px #0008}
+  #ui h2{margin:0 0 8px;font-size:18px}
+  .row{display:flex;align-items:center;gap:10px;margin:8px 0}
+  label{font-size:13px;flex:1 0 160px}
+  input[type=range]{flex:1}
+  output{width:60px;text-align:right;font-variant-numeric:tabular-nums}
+  .btn{padding:7px 10px;border-radius:9px;background:#1f2a3b;border:1px solid #2c3b51;color:#cfe1ff;cursor:pointer}
+  .btn.active{background:#2c3b51;border-color:#4fc3f7}
+  .small{font-size:12px;opacity:.85}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1a2a3d;border:1px solid #234;color:#9bd1ff;font-size:12px}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="canvas"></canvas></div>
+
+<div id="ui">
+  <h2>🧪 Quantum Well σ-Evolution</h2>
+  <div class="small" style="margin-bottom:8px;line-height:1.35">
+    Equation: <em>iħ ∂<sub>σ</sub>ψ = τ₀ e^σ H ψ</em> (1D harmonic well).<br/>
+    Freeze for σ→−∞, speed up for σ→+∞. <span class="pill" id="status">ready</span>
+  </div>
+
+  <div class="row"><label>Well frequency ω</label>
+    <input id="omega" type="range" min="0.4" max="2.5" step="0.05" value="1.00">
+    <output id="omegaOut">1.00</output></div>
+
+  <div class="row"><label>Wave packet width σ₀</label>
+    <input id="sigmaPacket" type="range" min="0.3" max="2.5" step="0.05" value="1.00">
+    <output id="sigmaPacketOut">1.00</output></div>
+
+  <div class="row"><label>Initial momentum k₀</label>
+    <input id="momentum" type="range" min="0" max="4.0" step="0.05" value="1.00">
+    <output id="momentumOut">2.00</output></div>
+
+  <div class="row"><label>τ₀ time scale</label>
+    <input id="tau0" type="range" min="0.2" max="2.0" step="0.05" value="1.00">
+    <output id="tau0Out">1.00</output></div>
+
+  <div class="row"><label>σ step Δσ (requested)</label>
+    <input id="dtSigma" type="range" min="0.0005" max="0.02" step="0.0005" value="0.0050">
+    <output id="dtSigmaOut">0.0050</output></div>
+
+  <div class="row"><label>σ scrub</label>
+    <input id="sigmaScrub" type="range" min="-6" max="6" step="0.001" value="-2.000">
+    <output id="sigmaScrubOut">-2.000</output></div>
+
+  <div class="row">
+    <button id="reset" class="btn">🔄 Reset ψ</button>
+    <button id="pause" class="btn">⏸️ Pause σ</button>
+    <button id="export" class="btn">📊 Export</button>
+  </div>
+
+  <div id="readout" class="small" style="margin-top:8px;line-height:1.35"></div>
+</div>
+
+<script>
+/* =================== Zero-dependency Canvas implementation =================== */
+
+// --- Canvas setup ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+// --- UI helpers ---
+const $ = id => document.getElementById(id);
+const bindOut = (id,out,fmt=v=>v)=>{ const el=$(id), oo=$(out); const up=()=>oo.textContent=fmt(+el.value); el.addEventListener('input',up); up(); };
+bindOut('omega','omegaOut',v=>v.toFixed(2));
+bindOut('sigmaPacket','sigmaPacketOut',v=>v.toFixed(2));
+bindOut('momentum','momentumOut',v=>v.toFixed(2));
+bindOut('tau0','tau0Out',v=>v.toFixed(2));
+bindOut('dtSigma','dtSigmaOut',v=>(+v).toFixed(4));
+bindOut('sigmaScrub','sigmaScrubOut',v=>(+v).toFixed(3));
+
+const ui = {
+  omega: $('omega'), sigmaPacket: $('sigmaPacket'), momentum: $('momentum'),
+  tau0: $('tau0'), dtSigma: $('dtSigma'), sigmaScrub: $('sigmaScrub'),
+  reset: $('reset'), pause: $('pause'), export: $('export'),
+  readout: $('readout'), status: $('status')
+};
+
+// --- Simulation state (1D grid) ---
+const N = 512;                   // grid points (increased for wider domain)
+const dx = 0.08;                 // spatial spacing (finer for better resolution)
+let psiRe = new Float64Array(N);
+let psiIm = new Float64Array(N);
+let V     = new Float64Array(N);
+let mask  = new Float64Array(N); // absorbing boundary mask
+let currentSigma = parseFloat(ui.sigmaScrub.value);
+let paused = false;
+let trail = [];
+
+// Periodic boundary Laplacian
+function lap(arr, i){
+  const im = (i - 1 + N) % N;
+  const ip = (i + 1) % N;
+  return (arr[ip] - 2*arr[i] + arr[im]) / (dx*dx);
+}
+
+// Initialize absorbing boundary mask
+function initMask(){
+  for (let i = 0; i < N; i++){
+    // Inner 70% = 1, outer 15% on each side tapers to zero
+    const leftTaper = Math.min(i / (0.15 * N), 1.0);
+    const rightTaper = Math.min((N - 1 - i) / (0.15 * N), 1.0);
+    mask[i] = Math.max(0, Math.min(leftTaper, rightTaper));
+  }
+}
+
+// Initialize Gaussian packet in harmonic potential
+function initState(){
+  const s0 = parseFloat(ui.sigmaPacket.value);
+  const k0 = parseFloat(ui.momentum.value);
+  const omega = parseFloat(ui.omega.value);
+
+  console.log('Initializing with:', { s0, k0, omega, currentSigma });
+
+  // Initialize absorbing boundary mask
+  initMask();
+
+  // potential V(x) = 1/2 ω^2 x^2
+  for(let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    V[i] = 0.5 * omega * omega * x*x;
+  }
+
+  // normalized Gaussian envelope with plane-wave phase
+  const normC = Math.pow(Math.PI * s0*s0, -0.25);
+  console.log('Normalization constant:', normC);
+  
+  for(let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    const g = normC * Math.exp(- (x*x) / (2*s0*s0));
+    psiRe[i] = g * Math.cos(k0 * x);
+    psiIm[i] = g * Math.sin(k0 * x);
+  }
+  
+  // Check norm before renormalization
+  let normBefore=0; 
+  for(let i=0;i<N;i++) normBefore += (psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i]);
+  console.log('Norm before renorm:', normBefore*dx);
+  console.log('Sample psi values:', { 
+    psiRe_mid: psiRe[N/2], 
+    psiIm_mid: psiIm[N/2],
+    psiRe_max: Math.max(...psiRe),
+    psiIm_max: Math.max(...psiIm)
+  });
+  
+  // renormalize (defensive)
+  renorm();
+  
+  // Check norm after renormalization
+  let normAfter=0; 
+  for(let i=0;i<N;i++) normAfter += (psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i]);
+  console.log('Norm after renorm:', normAfter*dx);
+  
+  trail = [];
+  ui.status.textContent = 'ready';
+}
+function renorm(){
+  let s=0; 
+  for(let i=0;i<N;i++) {
+    const normSq = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+    if (!isFinite(normSq)) {
+      console.error(`NaN detected in norm calculation at i=${i}: psiRe=${psiRe[i]}, psiIm=${psiIm[i]}`);
+      // Reinitialize to recover from NaN
+      const s0 = parseFloat(ui.sigmaPacket.value);
+      const k0 = parseFloat(ui.momentum.value);
+      const normC = Math.pow(Math.PI * s0*s0, -0.25);
+      for(let j=0;j<N;j++){
+        const x = (j - N/2) * dx;
+        const g = normC * Math.exp(- (x*x) / (2*s0*s0));
+        psiRe[j] = g * Math.cos(k0 * x);
+        psiIm[j] = g * Math.sin(k0 * x);
+      }
+      return;
+    }
+    s += normSq;
+  }
+  
+  s = Math.sqrt(Math.max(s*dx, 1e-30));
+  
+  if (!isFinite(s) || s < 1e-10) {
+    console.warn(`Renorm: Invalid norm s=${s}, reinitializing...`);
+    // Don't divide by tiny number, reinitialize instead
+    const s0 = parseFloat(ui.sigmaPacket.value);
+    const k0 = parseFloat(ui.momentum.value);
+    const normC = Math.pow(Math.PI * s0*s0, -0.25);
+    for(let i=0;i<N;i++){
+      const x = (i - N/2) * dx;
+      const g = normC * Math.exp(- (x*x) / (2*s0*s0));
+      psiRe[i] = g * Math.cos(k0 * x);
+      psiIm[i] = g * Math.sin(k0 * x);
+    }
+    s = 1.0; // After reinitialization
+  }
+  
+  // Final safety check before division
+  if (s > 1e-15) {
+    for(let i=0;i<N;i++){ 
+      psiRe[i] /= s; 
+      psiIm[i] /= s; 
+      
+      // Final NaN check after normalization
+      if (!isFinite(psiRe[i]) || !isFinite(psiIm[i])) {
+        console.error(`NaN after normalization at i=${i}, reinitializing...`);
+        initState();
+        return;
+      }
+    }
+  }
+}
+
+// Health check for wavefunction
+function checkWavefunctionHealth() {
+  let hasNaN = false;
+  let hasInfinite = false;
+  let totalNorm = 0;
+  
+  for(let i = 0; i < N; i++) {
+    if (isNaN(psiRe[i]) || isNaN(psiIm[i])) hasNaN = true;
+    if (!isFinite(psiRe[i]) || !isFinite(psiIm[i])) hasInfinite = true;
+    totalNorm += psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+  }
+  
+  if (hasNaN || hasInfinite || !isFinite(totalNorm) || totalNorm < 1e-20) {
+    console.error(`Wavefunction corrupted: NaN=${hasNaN}, Infinite=${hasInfinite}, norm=${totalNorm}`);
+    initState(); // Emergency reinitialization
+    return false;
+  }
+  
+  return true;
+}
+
+// Calculate total energy E = ∫ψ*[H]ψ dx where H = -½∂²/∂x² + V(x)
+function calculateEnergy() {
+  const hbar = 1.0, m = 1.0;
+  let totalEnergy = 0;
+  
+  for(let i = 0; i < N; i++) {
+    // Kinetic energy: -½ψ*∂²ψ/∂x²
+    const lapRe = lap(psiRe, i);
+    const lapIm = lap(psiIm, i);
+    const kineticContrib = -0.5 * (hbar*hbar/(2*m)) * (psiRe[i]*lapRe + psiIm[i]*lapIm);
+    
+    // Potential energy: ψ*V(x)ψ
+    const potentialContrib = V[i] * (psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i]);
+    
+    totalEnergy += (kineticContrib + potentialContrib) * dx;
+  }
+  
+  return totalEnergy;
+}
+
+// One σ-step (explicit Euler; small Δσ; renormalize)
+function evolveSigma(dtSigma){
+  const hbar = 1.0, m = 1.0;
+  const tau0 = parseFloat(ui.tau0.value);
+  const tauEff = tau0 * Math.exp(currentSigma);
+
+  // Safety check for numerical overflow
+  if (!isFinite(tauEff) || tauEff > 1e6) {
+    console.warn(`Evolution stopped: tauEff=${tauEff} too large at σ=${currentSigma}`);
+    return;
+  }
+
+  const evolutionScale = (tauEff * dtSigma / hbar);
+  
+  // Safety check for evolution scale
+  if (!isFinite(evolutionScale) || Math.abs(evolutionScale) > 100) {
+    console.warn(`Evolution stopped: scale=${evolutionScale} too large (dtSigma=${dtSigma})`);
+    return;
+  }
+
+  // Hψ = −(ħ²/2m)∂xx ψ + V ψ
+  // ∂σ ψ = −i (τ_eff/ħ) H ψ  → Euler in σ
+  let nanDetected = false;
+  for(let i=0;i<N;i++){
+    const HRe = - (hbar*hbar/(2*m)) * lap(psiRe, i) + V[i] * psiRe[i];
+    const HIm = - (hbar*hbar/(2*m)) * lap(psiIm, i) + V[i] * psiIm[i];
+    
+    // Check for NaN in Hamiltonian
+    if (!isFinite(HRe) || !isFinite(HIm)) {
+      console.warn(`NaN detected in Hamiltonian at i=${i}: HRe=${HRe}, HIm=${HIm}`);
+      nanDetected = true;
+      break;
+    }
+    
+    const dRe = - evolutionScale * HIm;
+    const dIm =   evolutionScale * HRe;
+    
+    // Check for NaN in derivatives
+    if (!isFinite(dRe) || !isFinite(dIm)) {
+      console.warn(`NaN detected in derivatives at i=${i}: dRe=${dRe}, dIm=${dIm}`);
+      nanDetected = true;
+      break;
+    }
+    
+    psiRe[i] += dRe; 
+    psiIm[i] += dIm;
+    
+    // Apply absorbing boundary mask
+    psiRe[i] *= mask[i];
+    psiIm[i] *= mask[i];
+    
+    // Check for NaN in updated wavefunction
+    if (!isFinite(psiRe[i]) || !isFinite(psiIm[i])) {
+      console.warn(`NaN detected in wavefunction at i=${i}: psiRe=${psiRe[i]}, psiIm=${psiIm[i]}`);
+      nanDetected = true;
+      break;
+    }
+  }
+  
+  if (nanDetected) {
+    console.error('NaN detected during evolution - reinitializing wavefunction');
+    initState(); // Reinitialize to recover
+    return;
+  }
+  
+  renorm();
+  currentSigma += dtSigma;
+}
+
+// Adaptive dtSigma to keep τ_eff * Δσ modest
+function effectiveStep(){
+  const dtReq = parseFloat(ui.dtSigma.value);
+  const tau0 = parseFloat(ui.tau0.value);
+  const tauEff = tau0 * Math.exp(currentSigma);
+  
+  // Conservative limiting to prevent numerical instability
+  const evolutionScale = tauEff * dtReq;
+  const maxStableScale = 0.1; // Very conservative for stability
+  
+  if (evolutionScale > maxStableScale) {
+    const safeDt = maxStableScale / (tauEff + 1e-10);
+    console.log(`Step limited: dtReq=${dtReq} → safeDt=${safeDt} (tauEff=${tauEff})`);
+    return safeDt;
+  }
+  
+  // Additional safety for very small requested steps
+  const minDt = 1e-6; // Prevent ridiculously small steps
+  const maxDt = 0.01; // Prevent overly large steps
+  
+  return Math.max(minDt, Math.min(dtReq, maxDt));
+}
+
+// --- Drawing (Canvas 2D) ---
+function draw(){
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // world → screen mapping
+  const xSpan = (N-1)*dx;                // world width
+  const xScale = W * 0.8 / xSpan;        // pixels per world unit
+  const xOffset = W*0.1;
+  const yMid = H*0.60;
+  const yProb = H*0.35;                  // vertical scale for |ψ|²
+  const yPot  = H*0.20;                  // vertical scale for potential
+
+  // axes
+  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,yMid); ctx.lineTo(W,yMid); ctx.stroke();
+
+  // potential curve (blue)
+  ctx.strokeStyle = 'rgba(136,170,255,0.85)';
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    const X = xOffset + (x + xSpan/2) * xScale;
+    const Y = yMid - Math.max(-H*0.45, Math.min(H*0.45, V[i]*0.02*yPot));
+    if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+  }
+  ctx.stroke();
+
+  // probability density |ψ|² with phase-tinted stroke
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    const p = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+    const X = xOffset + (x + xSpan/2) * xScale;
+    const Y = yMid - Math.min(0.9*yProb, p * yProb * 3.0);
+    if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+  }
+  // gradient based on average phase (quick visual cue)
+  let avgPhase = 0; for(let i=0;i<N;i++){ avgPhase += Math.atan2(psiIm[i], psiRe[i]); } avgPhase/=N;
+  const hue = (180 + 90*Math.sin(avgPhase))|0;
+  ctx.strokeStyle = `hsl(${hue} 60% 70% / 0.95)`;
+  ctx.stroke();
+
+  // HUD text
+  const tauEff = parseFloat(ui.tau0.value) * Math.exp(currentSigma);
+  const dtReq = parseFloat(ui.dtSigma.value);
+  const dtEff = effectiveStep();
+  const normInt = (()=>{ let s=0; for(let i=0;i<N;i++) s += (psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i]); return s*dx; })();
+  const energy = calculateEnergy();
+  ui.readout.innerHTML =
+    `σ = ${currentSigma.toFixed(3)} &nbsp; τ<sub>eff</sub>=τ₀e^σ=${tauEff.toExponential(2)}<br>`+
+    `Δσ (req) = ${dtReq.toFixed(6)} &nbsp; <span style="color:${dtEff<dtReq-1e-6?'#ffd54f':'#cfe1ff'}">Δσ (eff) = ${dtEff.toFixed(6)}</span><br>`+
+    `∫|ψ|²dx = ${normInt.toFixed(4)} &nbsp; E = ${energy.toFixed(3)}`;
+}
+
+// --- Animation loop ---
+let last = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+
+  if (!paused && currentSigma < 10.0){  // Add upper bound to prevent runaway evolution
+    // Check wavefunction health before evolution
+    if (!checkWavefunctionHealth()) {
+      console.warn('Wavefunction health check failed, pausing...');
+      paused = true;
+      ui.pause.classList.add('active');
+      ui.pause.textContent = '▶️ Resume σ';
+      return;
+    }
+    
+    // do a few substeps per frame for smoother evolution
+    const steps = 8;
+    const dtStep = effectiveStep();
+    for (let k=0;k<steps;k++) {
+      evolveSigma(dtStep);
+      
+      // Check health after each substep for extra safety
+      if (!checkWavefunctionHealth()) {
+        console.warn('Wavefunction corrupted during evolution, pausing...');
+        paused = true;
+        ui.pause.classList.add('active');
+        ui.pause.textContent = '▶️ Resume σ';
+        break;
+      }
+    }
+  }
+  // log a small trail (for export)
+  trail.push({ t: now|0, sigma: currentSigma, dtSigmaEff: effectiveStep() });
+  if (trail.length > 600) trail.shift();
+
+  draw();
+}
+requestAnimationFrame(loop);
+
+// --- Interactions ---
+ui.reset.onclick = ()=>{ initState(); };
+ui.pause.onclick = ()=>{
+  paused = !paused;
+  ui.pause.classList.toggle('active', paused);
+  ui.pause.textContent = paused ? '▶️ Resume σ' : '⏸️ Pause σ';
+};
+ui.sigmaScrub.addEventListener('input', ()=>{
+  currentSigma = parseFloat(ui.sigmaScrub.value);
+  paused = true; ui.pause.textContent = '▶️ Resume σ';
+});
+['omega','sigmaPacket','momentum'].forEach(id=>{
+  $(id).addEventListener('input', ()=>{
+    // reinitialize wave packet smoothly after 120ms of idle
+    clearTimeout(initState._t);
+    initState._t = setTimeout(()=>{ initState(); }, 120);
+  });
+});
+
+// --- Export (JSON) ---
+ui.export.onclick = ()=>{
+  // Log current state before export
+  let normCheck=0; 
+  for(let i=0;i<N;i++) normCheck += (psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i]);
+  console.log('Export: Norm check =', normCheck*dx);
+  console.log('Export: Sample values =', { 
+    psiRe_mid: psiRe[N/2], 
+    psiIm_mid: psiIm[N/2],
+    psiRe_nonzero: psiRe.filter(x => Math.abs(x) > 1e-10).length,
+    psiIm_nonzero: psiIm.filter(x => Math.abs(x) > 1e-10).length
+  });
+  
+  const x = Array.from({length:N}, (_,i)=> (i - N/2)*dx );
+  const payload = {
+    timestamp: new Date().toISOString(),
+    model: "Harmonic well (Canvas, no dependencies)",
+    equation: "iħ ∂σψ = τ0 e^σ H ψ (explicit σ-step, renormalized each substep)",
+    N, dx,
+    params: {
+      omega: parseFloat(ui.omega.value),
+      sigma0: parseFloat(ui.sigmaPacket.value),
+      k0: parseFloat(ui.momentum.value),
+      tau0: parseFloat(ui.tau0.value)
+    },
+    current: {
+      sigma: currentSigma,
+      x,
+      waveFunction: {
+        real: Array.from(psiRe),
+        imaginary: Array.from(psiIm)
+      }
+    },
+    trail
+  };
+  
+  // Verify payload has non-zero wavefunction
+  const realNonZero = payload.current.waveFunction.real.filter(x => Math.abs(x) > 1e-10).length;
+  const imagNonZero = payload.current.waveFunction.imaginary.filter(x => Math.abs(x) > 1e-10).length;
+  console.log('Payload verification:', { realNonZero, imagNonZero });
+  
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `ltqg_quantum_data_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+};
+
+// boot
+initState();
+</script>
+</body>
+</html>

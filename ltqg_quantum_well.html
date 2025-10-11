@@ -5,429 +5,482 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>LTQG — Quantum Well σ-Evolution</title>
 <style>
-  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  :root { --bg:#0f1419; --panel:#151c28cc; --txt:#e8eaed; --accent:#89c2ff; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
   #ui {
-    position: fixed; top: 12px; right: 12px; width: 340px; background: #151c28cc; padding: 14px 16px;
-    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
-    border: 1px solid rgba(255,255,255,0.1);
+    position: fixed; top: 16px; right: 16px; width: 360px; background: var(--panel);
+    padding: 14px 16px; border-radius: 14px; box-shadow: 0 12px 40px #0008; border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(8px);
   }
-  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
-  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
-  label { font-size: 13px; opacity: 0.9; }
-  input[type="range"] { width: 160px; }
-  .small { font-size: 12px; opacity: 0.8; }
+  #ui h2 { margin: 0 0 8px; font-size: 18px; }
+  .small { font-size: 12px; opacity: 0.85; }
+  .row { display:flex; align-items:center; gap:10px; margin:8px 0; }
+  label { font-size: 13px; flex: 1 0 160px; }
+  input[type="range"]{ flex:1 1 auto; }
+  output { width:56px; text-align:right; font-variant-numeric: tabular-nums; }
+  .btn { padding:8px 10px; border-radius:10px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; }
+  .btn.active { background:#2c3b51; border-color:#4fc3f7; }
+  .btn:focus { outline:2px solid #4fc3f7; outline-offset:2px; }
   #canvas { width:100%; height:100%; display:block; }
-  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
-  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
-  .btn:hover { background:#253442; border-color: #3a4b63; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#1a2a3d; border:1px solid #234; color:#9bd1ff; font-size:12px;}
+  a.link { color:#9bd1ff; text-decoration:none; }
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
 
 <div id="ui">
-  <h2>🔬 Quantum Well σ-Evolution</h2>
-  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
-    <strong>Physics:</strong> iℏ ∂σψ = τ₀ e^σ H ψ<br>
-    Freeze-out for σ→-∞, rapid oscillation for σ→+∞<br>
-    <em>Real-time σ-Schrödinger evolution in harmonic well</em>
+  <h2>🧪 Quantum Well σ-Evolution</h2>
+  <div class="small" style="margin-bottom:8px; line-height:1.35;">
+    Physics: <em>iħ ∂<sub>σ</sub>ψ = τ₀ e^σ H ψ</em> (harmonic well).<br/>
+    Freeze-out for σ→−∞; rapid oscillation for σ→+∞.<br/>
+    <span class="pill" id="status">ready</span>
   </div>
-  
-  <div class="row">
-    <label>Well frequency ω</label>
-    <input id="omega" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
-  </div>
-  <div class="row">
-    <label>Wave packet width σ₀</label>
-    <input id="sigmaPacket" type="range" min="0.5" max="2.0" step="0.1" value="1.0">
-  </div>
-  <div class="row">
-    <label>Initial momentum k₀</label>
-    <input id="momentum" type="range" min="0.5" max="4.0" step="0.1" value="2.0">
-  </div>
-  <div class="row">
-    <label>τ₀ time scale</label>
-    <input id="tau0" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
-  </div>
-  <div class="row">
-    <label>σ evolution step</label>
-    <input id="dtSigma" type="range" min="0.001" max="0.02" step="0.001" value="0.005">
-  </div>
-  
+
+  <div class="row"><label>Well frequency ω</label>
+    <input id="omega" type="range" min="0.4" max="2.5" step="0.05" value="1.0">
+    <output id="omegaOut">1.00</output></div>
+
+  <div class="row"><label>Wave packet width σ₀</label>
+    <input id="sigmaPacket" type="range" min="0.3" max="2.5" step="0.05" value="1.0">
+    <output id="sigmaPacketOut">1.00</output></div>
+
+  <div class="row"><label>Initial momentum k₀</label>
+    <input id="momentum" type="range" min="0.0" max="4.0" step="0.05" value="2.0">
+    <output id="momentumOut">2.00</output></div>
+
+  <div class="row"><label>τ₀ time scale</label>
+    <input id="tau0" type="range" min="0.2" max="2.0" step="0.05" value="1.0">
+    <output id="tau0Out">1.00</output></div>
+
+  <div class="row"><label>σ evolution step Δσ (req)</label>
+    <input id="dtSigma" type="range" min="0.0005" max="0.02" step="0.0005" value="0.005">
+    <output id="dtSigmaOut">0.0050</output></div>
+
+  <div class="row"><label>σ scrub</label>
+    <input id="sigmaScrub" type="range" min="-6" max="6" step="0.001" value="-2.0">
+    <output id="sigmaScrubOut">-2.000</output></div>
+
   <div class="row">
     <button id="resetWavePacket" class="btn">🔄 Reset ψ</button>
-    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit: OFF</button>
   </div>
   <div class="row">
     <button id="pauseEvolution" class="btn">⏸️ Pause σ</button>
     <button id="exportData" class="btn">📊 Export Data</button>
   </div>
-  
-  <div class="small" id="readout"></div>
+
+  <div id="readout" class="small" style="margin-top:8px; line-height:1.35;"></div>
 </div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+<!-- Three.js (UMD build - works with file://) -->
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// Set module OK flag for UMD build
+window.__ltqg_mod_ok__ = true;
+
+// ---------- Renderer / Scene ----------
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f1419);
+scene.fog = new THREE.FogExp2(0x0f1419, 0.008); // gentler fog
+
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0, 4.5, 10);
+camera.lookAt(0, 0.5, 0);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = false;
+controls.autoRotateSpeed = 1.2;
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.30);
+const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+dir.position.set(5, 8, 6);
+scene.add(ambient, dir);
+
+const grid = new THREE.GridHelper(40, 40, 0x222a33, 0x222a33);
+grid.material.transparent = true; grid.material.opacity = 0.15;
+scene.add(grid);
+
+// ---------- UI helpers ----------
+const $ = id => document.getElementById(id);
+const bindOut = (id,out,fmt=v=>v)=>{ const el=$(id), oo=$(out); const up=()=>oo.textContent=fmt(+el.value); el.addEventListener('input',up); up(); };
+bindOut('omega','omegaOut',v=>v.toFixed(2));
+bindOut('sigmaPacket','sigmaPacketOut',v=>v.toFixed(2));
+bindOut('momentum','momentumOut',v=>v.toFixed(2));
+bindOut('tau0','tau0Out',v=>v.toFixed(2));
+bindOut('dtSigma','dtSigmaOut',v=>(+v).toFixed(4));
+bindOut('sigmaScrub','sigmaScrubOut',v=>(+v).toFixed(3));
+
+const ui = {
+  omega: $('omega'), sigmaPacket: $('sigmaPacket'), momentum: $('momentum'),
+  tau0: $('tau0'), dtSigma: $('dtSigma'), sigmaScrub: $('sigmaScrub'),
+  resetWavePacket: $('resetWavePacket'), autoOrbit: $('autoOrbit'),
+  pauseEvolution: $('pauseEvolution'), exportData: $('exportData'),
+  readout: $('readout'), status: $('status')
+};
+
+let autoOrbitEnabled = false;
+ui.autoOrbit.onclick = ()=>{
+  autoOrbitEnabled = !autoOrbitEnabled;
+  controls.autoRotate = autoOrbitEnabled;
+  ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  ui.autoOrbit.textContent = autoOrbitEnabled ? '🌀 Auto-orbit: ON' : '🌀 Auto-orbit: OFF';
+};
+
+// ---------- Simulation state ----------
+const N = 256;           // grid points
+const dx = 0.1;          // spatial spacing
+const xScale = 0.20;     // widen footprint (visibility)
+let psiRe = new Float32Array(N);
+let psiIm = new Float32Array(N);
+let Varr  = new Float32Array(N);
+
+let currentSigma = parseFloat(ui.sigmaScrub.value);
+let evolutionPaused = false;
+let dataExportArray = [];
+
+ui.pauseEvolution.onclick = ()=>{
+  evolutionPaused = !evolutionPaused;
+  ui.pauseEvolution.classList.toggle('active', evolutionPaused);
+  ui.pauseEvolution.textContent = evolutionPaused ? '▶️ Resume σ' : '⏸️ Pause σ';
+};
+
+// ---------- Geometry: potential + wave ----------
+let potentialLine, quantumWell, quantumPts;
+
+function createPotentialWell(){
+  if (potentialLine){ scene.remove(potentialLine); potentialLine.geometry.dispose(); potentialLine.material.dispose(); }
+  const omega = parseFloat(ui.omega.value);
+  const pts = [];
+  for (let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    const V = 0.5 * omega * omega * (x*x);
+    const xPos = (i - N/2) * dx * xScale;
+    const yV = Math.max(-6, Math.min(6, V * 0.02)); // keep in-frame
+    pts.push(new THREE.Vector3(xPos, yV, -5));
+  }
+  const geom = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat  = new THREE.LineBasicMaterial({ color:0x88aaff, transparent:true, opacity:0.7 });
+  potentialLine = new THREE.Line(geom, mat);
+  scene.add(potentialLine);
+}
+
+function gaussianInit(){
+  // initial packet centered at x0=0
+  const s0 = parseFloat(ui.sigmaPacket.value);
+  const k0 = parseFloat(ui.momentum.value);
+  const normC = Math.pow(Math.PI*s0*s0, -0.25);
+  for (let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    const g = normC * Math.exp( - (x*x)/(2*s0*s0) );
+    psiRe[i] = g * Math.cos(k0 * x);
+    psiIm[i] = g * Math.sin(k0 * x);
+  }
+  // build potential array for worker
+  const omega = parseFloat(ui.omega.value);
+  for (let i=0;i<N;i++){
+    const x = (i - N/2) * dx;
+    Varr[i] = 0.5 * omega * omega * (x*x);
   }
 }
-</script>
-<script type="module">
-  import * as THREE from 'three';
-  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-  const canvas = document.getElementById('canvas');
-  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-  renderer.setClearColor(0x0f1419, 1);
+function createQuantumVisualization(){
+  if (quantumWell){ scene.remove(quantumWell); quantumWell.geometry.dispose(); quantumWell.material.dispose(); }
+  if (quantumPts){ scene.remove(quantumPts); quantumPts.geometry.dispose(); quantumPts.material.dispose(); }
 
-  const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0f1419, 0.02);
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 8, 15);
-  camera.lookAt(0,0,0);
+  const geom = new THREE.BufferGeometry();
+  const positions = new Float32Array(N*3);
+  const colors    = new Float32Array(N*3);
+  geom.setAttribute('position', new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
+  geom.setAttribute('color',    new THREE.BufferAttribute(colors,3).setUsage(THREE.DynamicDrawUsage));
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+  const mat = new THREE.LineBasicMaterial({ vertexColors:true, transparent:true, opacity:1.0 });
+  quantumWell = new THREE.Line(geom, mat);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-  dirLight.position.set(5, 10, 8);
-  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.3));
+  // Draw initial ψ immediately (no black frame)
+  for (let i=0;i<N;i++){
+    positions[i*3]   = (i - N/2) * dx * xScale;
+    const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+    const y = Math.min(3.0, prob * 3.0);
+    positions[i*3+1] = y;
+    positions[i*3+2] = 0;
 
-  // UI setup
-  const $ = id => document.getElementById(id);
-  const ui = {
-    omega: $('omega'),
-    sigmaPacket: $('sigmaPacket'),
-    momentum: $('momentum'),
-    tau0: $('tau0'),
-    dtSigma: $('dtSigma'),
-    resetWavePacket: $('resetWavePacket'),
-    autoOrbit: $('autoOrbit'),
-    pauseEvolution: $('pauseEvolution'),
-    exportData: $('exportData'),
-    readout: $('readout')
+    const phase = Math.atan2(psiIm[i], psiRe[i]);
+    colors[i*3]   = 0.5 + 0.5*Math.sin(phase);
+    colors[i*3+1] = Math.min(1.0, prob * 6.0);
+    colors[i*3+2] = 0.8;
+  }
+  scene.add(quantumWell);
+
+  // Optional points overlay for thickness
+  const ptsMat = new THREE.PointsMaterial({ size:0.02, vertexColors:true, transparent:true, opacity:0.6 });
+  quantumPts = new THREE.Points(geom, ptsMat);
+  scene.add(quantumPts);
+
+  geom.attributes.position.needsUpdate = true;
+  geom.attributes.color.needsUpdate = true;
+}
+
+function updateQuantumVisualization(){
+  if (!quantumWell) return;
+  const pos = quantumWell.geometry.attributes.position.array;
+  const col = quantumWell.geometry.attributes.color.array;
+  for (let i=0;i<N;i++){
+    const idx = i*3;
+    const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+    const y = Math.min(3.0, prob * 3.0);
+    pos[idx]   = (i - N/2) * dx * xScale;
+    pos[idx+1] = y;
+    pos[idx+2] = 0;
+
+    const phase = Math.atan2(psiIm[i], psiRe[i]);
+    col[idx]   = 0.5 + 0.5*Math.sin(phase);
+    col[idx+1] = Math.min(1.0, prob * 6.0);
+    col[idx+2] = 0.8;
+  }
+  quantumWell.geometry.attributes.position.needsUpdate = true;
+  quantumWell.geometry.attributes.color.needsUpdate = true;
+}
+
+// ---------- Worker (inline via Blob) ----------
+let quantumWorker = null;
+(function makeWorker(){
+  try {
+    const src = `
+    self.onmessage = (e)=>{
+      const {N, dx, dtSigma, steps, tau0, sigma0, Varr, psiRe, psiIm} = e.data;
+      const hbar=1.0, m=1.0;
+      let sigma = sigma0;
+      let Re = Float64Array.from(psiRe), Im = Float64Array.from(psiIm);
+      const V = Float64Array.from(Varr);
+
+      const lap = (arr,i)=> (arr[(i+1)%N]-2*arr[i]+arr[(i-1+N)%N])/(dx*dx);
+
+      for (let n=0;n<steps;n++){
+        const tauEff = tau0 * Math.exp(sigma);
+        // explicit split-like Euler, small steps; renormalize
+        for (let i=0;i<N;i++){
+          const HRe = - (hbar*hbar/(2*m))*lap(Re,i) + V[i]*Re[i];
+          const HIm = - (hbar*hbar/(2*m))*lap(Im,i) + V[i]*Im[i];
+          const dRe = - (tauEff*dtSigma/hbar) * HIm;
+          const dIm =   (tauEff*dtSigma/hbar) * HRe;
+          Re[i]+=dRe; Im[i]+=dIm;
+        }
+        // renormalize each mini-step
+        let s=0; for (let i=0;i<N;i++) s += (Re[i]*Re[i]+Im[i]*Im[i]);
+        s = Math.sqrt(Math.max(s*dx,1e-30));
+        for (let i=0;i<N;i++){ Re[i]/=s; Im[i]/=s; }
+
+        sigma += dtSigma;
+
+        if (n%8===0){
+          const ReA = Array.from(Re, x => Number.isFinite(x)?x:0);
+          const ImA = Array.from(Im, x => Number.isFinite(x)?x:0);
+          postMessage({ sigma, Re:ReA, Im:ImA });
+        }
+      }
+      postMessage({ done:true, sigma, Re:Array.from(Re), Im:Array.from(Im) });
+    };`;
+    const url = URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+    quantumWorker = new Worker(url);
+  } catch(e) {
+    console.log('Worker creation failed:', e);
+    ui.status.textContent = 'no worker - static mode';
+  }
+})();
+
+// Worker ingest (defensive)
+let quantumRunning = false;
+if (quantumWorker) {
+  quantumWorker.onmessage = (e)=>{
+    const { sigma, Re, Im, done } = e.data;
+    if (!Array.isArray(Re) || !Array.isArray(Im) || !Number.isFinite(sigma)) return;
+    if (Re.some(n=>!Number.isFinite(n)) || Im.some(n=>!Number.isFinite(n))) return;
+
+    currentSigma = sigma;
+    psiRe = Float32Array.from(Re);
+    psiIm = Float32Array.from(Im);
+
+    updateQuantumVisualization();
+    if (done) quantumRunning = false;
   };
+}
 
-  // Quantum simulation parameters
-  const N = 256;
-  const dx = 0.1;
-  let currentSigma = -2.0;
-  let autoOrbitEnabled = false;
-  let evolutionPaused = false;
-  let dataExportArray = [];
-
-  // Wave function arrays
-  let psiRe = new Float32Array(N);
-  let psiIm = new Float32Array(N);
-  let Varr = new Float32Array(N);
-
-  // Visualization objects
-  let quantumWell, wellPotential;
-
-  // Create potential well visualization
-  function createPotentialWell() {
-    if (wellPotential) {
-      scene.remove(wellPotential);
-      wellPotential.geometry.dispose();
-      wellPotential.material.dispose();
-    }
-
-    const omega = parseFloat(ui.omega.value);
-    const points = [];
-    const x0 = N * dx / 2;
-    
-    for (let i = 0; i < N; i += 4) {
-      const x = i * dx;
-      const V = 0.5 * omega * omega * (x - x0) * (x - x0);
-      const xPos = (i - N/2) * dx * 0.05;
-      points.push(new THREE.Vector3(xPos, V * 0.5, -5));
-    }
-    
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({ 
-      color: 0x555566, 
-      transparent: true, 
-      opacity: 0.6 
-    });
-    
-    wellPotential = new THREE.Line(geometry, material);
-    scene.add(wellPotential);
-  }
-
-  // Initialize wave packet
-  function initializeWavePacket() {
-    const x0 = N * dx / 2;
-    const sigma_packet = parseFloat(ui.sigmaPacket.value);
-    const k0 = parseFloat(ui.momentum.value);
-    const omega = parseFloat(ui.omega.value);
-
-    // Initialize potential
-    for (let i = 0; i < N; i++) {
-      const x = i * dx;
-      Varr[i] = 0.5 * omega * omega * (x - x0) * (x - x0);
-      
-      // Gaussian wave packet
-      const dx_rel = x - x0;
-      const norm = Math.pow(2*Math.PI*sigma_packet*sigma_packet, -0.25);
-      const envelope = norm * Math.exp(-dx_rel*dx_rel / (4*sigma_packet*sigma_packet));
-      psiRe[i] = envelope * Math.cos(k0 * dx_rel);
-      psiIm[i] = envelope * Math.sin(k0 * dx_rel);
-    }
-
-    createPotentialWell();
-    createQuantumVisualization();
-  }
-
-  // Create wave function visualization
-  function createQuantumVisualization() {
-    if (quantumWell) {
-      scene.remove(quantumWell);
-      quantumWell.geometry.dispose();
-      quantumWell.material.dispose();
-    }
-
-    const positions = new Float32Array(N * 3);
-    const colors = new Float32Array(N * 3);
-    
-    for (let i = 0; i < N; i++) {
-      positions[i*3] = (i - N/2) * dx * 0.05;
-      positions[i*3+1] = 0;
-      positions[i*3+2] = 0;
-      
-      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
-      colors[i*3] = Math.min(1.0, prob * 8.0);
-      colors[i*3+1] = Math.min(1.0, prob * 4.0);
-      colors[i*3+2] = 0.9;
-    }
-    
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    const material = new THREE.LineBasicMaterial({ 
-      vertexColors: true, 
-      linewidth: 3,
-      transparent: true,
-      opacity: 0.9
-    });
-    
-    quantumWell = new THREE.Line(geometry, material);
-    scene.add(quantumWell);
-  }
-
-  // Inline quantum worker
-  const workerSrc = `
-self.onmessage = (e)=>{
-  const {N, dx, dtSigma, steps, tau0, sigma0, Varr, psiRe, psiIm} = e.data;
+// Main thread fallback evolver
+let workerOK = !!quantumWorker;
+function evolveOnMain(dtSigmaEff, steps, tau0, sigma0){
   const hbar=1.0, m=1.0; let sigma = sigma0;
-  const Re = Float64Array.from(psiRe), Im = Float64Array.from(psiIm);
-  const lap = (arr,i,N,dx)=> (arr[(i+1)%N]-2*arr[i]+arr[(i-1+N)%N])/(dx*dx);
-  for (let n=0;n<steps;n++){
+  const lap=(arr,i)=> (arr[(i+1)%N]-2*arr[i]+arr[(i-1+N)%N])/(dx*dx);
+  for (let n=0; n<steps; n++){
     const tauEff = tau0 * Math.exp(sigma);
     for (let i=0;i<N;i++){
-      const HRe = -(hbar*hbar/(2*m))*lap(Re,i,N,dx) + Varr[i]*Re[i];
-      const HIm = -(hbar*hbar/(2*m))*lap(Im,i,N,dx) + Varr[i]*Im[i];
-      const dRe = -(tauEff*dtSigma/hbar) * HIm;
-      const dIm =  (tauEff*dtSigma/hbar) * HRe;
-      Re[i]+=dRe; Im[i]+=dIm;
+      const HRe = -(hbar*hbar/(2*m))*lap(psiRe,i) + Varr[i]*psiRe[i];
+      const HIm = -(hbar*hbar/(2*m))*lap(psiIm,i) + Varr[i]*psiIm[i];
+      const dRe = -(tauEff*dtSigmaEff/hbar)*HIm;
+      const dIm =  (tauEff*dtSigmaEff/hbar)*HRe;
+      psiRe[i]+=dRe; psiIm[i]+=dIm;
     }
-    sigma += dtSigma;
+    // renormalize
+    let s=0; for (let i=0;i<N;i++) s += (psiRe[i]*psiRe[i]+psiIm[i]*psiIm[i]);
+    s = Math.sqrt(Math.max(s*dx,1e-30));
+    for (let i=0;i<N;i++){ psiRe[i]/=s; psiIm[i]/=s; }
+    sigma += dtSigmaEff;
   }
-  postMessage({done:true, sigma, Re: Array.from(Re), Im: Array.from(Im)});
-};`;
+  currentSigma = sigma;
+  updateQuantumVisualization();
+}
 
-  let quantumWorker;
-  let quantumState = {sigma: currentSigma, running: false};
+// ---------- Initialization / reset ----------
+function initializeWavePacket(){
+  gaussianInit();
+  createPotentialWell();
+  createQuantumVisualization();
+  updateQuantumVisualization(); // draw immediately
+  dataExportArray = [];
+  ui.status.textContent = 'ready';
+}
+initializeWavePacket();
 
-  try {
-    const blobURL = URL.createObjectURL(new Blob([workerSrc], {type:'text/javascript'}));
-    quantumWorker = new Worker(blobURL);
-    
-    quantumWorker.onmessage = (e) => {
-      const {sigma, Re, Im, done} = e.data;
-      currentSigma = sigma;
-      quantumState.sigma = sigma;
-      
-      psiRe = Float32Array.from(Re);
-      psiIm = Float32Array.from(Im);
-      
-      updateQuantumVisualization();
-      
-      if (done) {
-        quantumState.running = false;
-      }
-    };
-  } catch (error) {
-    console.log('Quantum worker failed to initialize');
-  }
-
-  function updateQuantumVisualization() {
-    if (!quantumWell) return;
-    
-    const positions = quantumWell.geometry.attributes.position.array;
-    const colors = quantumWell.geometry.attributes.color.array;
-    
-    for (let i = 0; i < N; i++) {
-      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
-      positions[i*3+1] = prob * 3.0;
-      
-      colors[i*3] = Math.min(1.0, prob * 12.0);
-      colors[i*3+1] = Math.min(1.0, prob * 6.0);
-      colors[i*3+2] = 0.8;
-    }
-    
-    quantumWell.geometry.attributes.position.needsUpdate = true;
-    quantumWell.geometry.attributes.color.needsUpdate = true;
-  }
-
-  // Event handlers
-  ui.omega.addEventListener('input', initializeWavePacket);
-  ui.sigmaPacket.addEventListener('input', initializeWavePacket);
-  ui.momentum.addEventListener('input', initializeWavePacket);
-
-  ui.resetWavePacket.onclick = () => {
-    currentSigma = -2.0;
-    quantumState.sigma = currentSigma;
-    initializeWavePacket();
-    dataExportArray = [];
-  };
-
-  ui.pauseEvolution.onclick = () => {
-    evolutionPaused = !evolutionPaused;
-    ui.pauseEvolution.classList.toggle('active', evolutionPaused);
-    ui.pauseEvolution.textContent = evolutionPaused ? '▶️ Resume σ' : '⏸️ Pause σ';
-  };
-
-  ui.autoOrbit.onclick = () => {
-    autoOrbitEnabled = !autoOrbitEnabled;
-    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
-  };
-
-  ui.exportData.onclick = () => {
-    const exportData = {
-      timestamp: new Date().toISOString(),
-      physics: "Quantum Well σ-Evolution - iℏ ∂σψ = τ₀ e^σ H ψ",
-      parameters: {
-        omega: parseFloat(ui.omega.value),
-        sigmaPacket: parseFloat(ui.sigmaPacket.value),
-        momentum: parseFloat(ui.momentum.value),
-        tau0: parseFloat(ui.tau0.value),
-        dtSigma: parseFloat(ui.dtSigma.value),
-        gridPoints: N,
-        spatialStep: dx
-      },
-      currentState: {
-        sigma: currentSigma,
-        waveFunction: {
-          real: Array.from(psiRe),
-          imaginary: Array.from(psiIm)
-        }
-      },
-      evolutionData: dataExportArray.slice(-200)
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ltqg_quantum_data_${Date.now()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Initialize
+ui.resetWavePacket.onclick = ()=>{
   initializeWavePacket();
+};
 
-  // Animation loop
-  function animate() {
-    if (autoOrbitEnabled) {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 1.0;
-    } else {
-      controls.autoRotate = false;
-    }
+// ---------- Export ----------
+ui.exportData.onclick = ()=>{
+  const payload = {
+    timestamp: new Date().toISOString(),
+    model: "Harmonic well",
+    equation: "iħ ∂σψ = τ0 e^σ H ψ (explicit small-step, renormalized)",
+    N, dx,
+    params: {
+      omega: parseFloat(ui.omega.value),
+      sigma0: parseFloat(ui.sigmaPacket.value),
+      k0: parseFloat(ui.momentum.value),
+      tau0: parseFloat(ui.tau0.value)
+    },
+    current: {
+      sigma: currentSigma,
+      x: Array.from({length:N}, (_,i)=> (i - N/2)*dx ),
+      waveFunction: { real: Array.from(psiRe), imaginary: Array.from(psiIm) }
+    },
+    trail: dataExportArray.slice(-400)
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ltqg_quantum_data_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+};
 
-    // Quantum evolution
-    if (quantumWorker && !quantumState.running && !evolutionPaused && currentSigma < 4.0) {
-      quantumState.running = true;
+// ---------- Helpers ----------
+function computeNormIntegral(Re, Im, dx){
+  let s = 0; for (let i=0;i<Re.length;i++) s += (Re[i]*Re[i] + Im[i]*Im[i]);
+  return s * dx;
+}
+
+// ---------- Animate loop ----------
+let last = performance.now();
+function animate(now){
+  requestAnimationFrame(animate);
+  const dtReal = Math.min(0.05, (now - last)/1000); last = now;
+
+  controls.autoRotate = autoOrbitEnabled;
+  controls.update();
+
+  // evolve (send work)
+  const sigmaShown = Math.max(-6, Math.min(6, currentSigma)); // for UI & worker
+  // effective Δσ limiter: keep τ0 e^σ * Δσ modest
+  const dtReq = parseFloat(ui.dtSigma.value);
+  const tauEff = parseFloat(ui.tau0.value) * Math.exp(sigmaShown);
+  const dtSigmaEff = Math.min(dtReq, 0.4 / (1 + tauEff)); // cheap CFL-like cap
+
+  if (!evolutionPaused && !quantumRunning && quantumWorker){
+    quantumRunning = true;
+    try{
       quantumWorker.postMessage({
-        N, dx, 
-        dtSigma: parseFloat(ui.dtSigma.value), 
-        steps: 20,
-        tau0: parseFloat(ui.tau0.value), 
-        sigma0: currentSigma,
-        Varr: Array.from(Varr), 
-        psiRe: Array.from(psiRe), 
+        N, dx,
+        dtSigma: dtSigmaEff,
+        steps: 8,
+        tau0: parseFloat(ui.tau0.value),
+        sigma0: sigmaShown,
+        Varr: Array.from(Varr),
+        psiRe: Array.from(psiRe),
         psiIm: Array.from(psiIm)
       });
+    } catch(e){
+      ui.status.textContent = 'worker error';
+      ui.pauseEvolution.disabled = true;
+      ui.exportData.disabled = true;
+      quantumRunning = false;
     }
-
-    // Calculate wave function properties
-    let norm = 0, avgX = 0, avgP = 0;
-    const x0 = N * dx / 2;
-    
-    for (let i = 0; i < N; i++) {
-      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
-      norm += prob;
-      avgX += prob * (i * dx - x0);
-    }
-    norm = Math.sqrt(norm * dx);
-    avgX /= (norm * norm);
-
-    // Data collection
-    dataExportArray.push({
-      time: performance.now(),
-      sigma: currentSigma,
-      norm: norm,
-      avgPosition: avgX,
-      tau0: parseFloat(ui.tau0.value),
-      omega: parseFloat(ui.omega.value)
-    });
-    
-    if (dataExportArray.length > 500) {
-      dataExportArray = dataExportArray.slice(-250);
-    }
-
-    // Update readout
-    ui.readout.innerHTML = `
-      <div><strong>σ-Time Evolution:</strong></div>
-      <div>σ = ${currentSigma.toFixed(3)}</div>
-      <div>τ_eff = τ₀ e^σ = ${(parseFloat(ui.tau0.value) * Math.exp(currentSigma)).toExponential(2)}</div>
-      <div><strong>Wave Function:</strong></div>
-      <div>Norm = ${norm.toFixed(4)}</div>
-      <div>⟨x⟩ = ${avgX.toFixed(3)}</div>
-      <div><strong>System:</strong></div>
-      <div>ω = ${ui.omega.value} &nbsp; k₀ = ${ui.momentum.value}</div>
-      <div>σ₀ = ${ui.sigmaPacket.value} &nbsp; Δσ = ${ui.dtSigma.value}</div>
-      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
-        ${evolutionPaused ? '⏸️ Evolution paused' : 
-          currentSigma < -1 ? '❄️ Frozen regime (σ→-∞)' :
-          currentSigma > 2 ? '🌊 Rapid oscillation (σ→+∞)' : '⚡ Active evolution'}
-      </div>
-      <div style="margin-top:4px; font-size:11px; opacity:0.7;">
-        σ-Schrödinger: Natural freeze-out & acceleration
-      </div>
-      <div style="font-size:11px; color:#4fc3f7;">
-        Data points: ${dataExportArray.length}
-      </div>
-    `;
-
-    controls.update();
-    renderer.render(scene, camera);
   }
 
-  renderer.setAnimationLoop(animate);
+  // Main thread fallback if no worker
+  if (!quantumWorker && !evolutionPaused) {
+    evolveOnMain(dtSigmaEff, 8, parseFloat(ui.tau0.value), sigmaShown);
+  }
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  // readout + export trail
+  const normInt = computeNormIntegral(psiRe, psiIm, dx);
+  const effStyle = `color:${dtSigmaEff < dtReq - 1e-6 ? '#ffd54f' : '#cfe1ff'}`;
+  ui.readout.innerHTML = `
+    <div>σ = ${sigmaShown.toFixed(3)} &nbsp;&nbsp; τ<sub>eff</sub> = τ₀ e^σ = ${(tauEff).toExponential(2)}</div>
+    <div>Δσ (req) = ${dtReq.toFixed(6)} &nbsp;&nbsp; <span style="${effStyle}">Δσ (eff) = ${dtSigmaEff.toFixed(6)}</span></div>
+    <div>∫|ψ|² dx = ${normInt.toFixed(4)}</div>
+  `;
+
+  dataExportArray.push({ t: now|0, sigma: sigmaShown, dtSigmaEff, normInt });
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ---------- Sigma scrub & keyboard ----------
+ui.sigmaScrub.addEventListener('input', ()=>{
+  currentSigma = parseFloat(ui.sigmaScrub.value);
+  ui.sigmaScrubOut.textContent = (+ui.sigmaScrub.value).toFixed(3);
+  evolutionPaused = true; ui.pauseEvolution.textContent = '▶️ Resume σ';
+});
+
+document.addEventListener('keydown', (e)=>{
+  if (e.key === ' ') { e.preventDefault(); ui.pauseEvolution.click(); }
+  if (e.key === 'o' || e.key === 'O') { ui.autoOrbit.click(); }
+  if (e.key === '0') { ui.resetWavePacket.click(); }
+});
+
+// ---------- Resize ----------
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+<!-- Module import failure detection -->
+<script>
+  if (!window.__ltqg_mod_ok__) {
+    document.body.innerHTML = '<div style="color:#ffb4a4;padding:24px;font:16px ui-monospace,monospace;line-height:1.6;max-width:600px;">\
+      <h3 style="color:#ff6b6b;margin:0 0 16px">❌ LTQG Module Load Failed</h3>\
+      <p><strong>Issue:</strong> Three.js ES modules did not load (offline, blocked, or file:// protocol).</p>\
+      <p><strong>Solutions:</strong></p>\
+      <ul>\
+        <li>🌐 Check internet connection</li>\
+        <li>🔧 Run from <code>http://localhost</code> (use local server)</li>\
+        <li>📁 Try opening from <code>http://</code> instead of <code>file://</code></li>\
+        <li>🛡️ Check Content Security Policy (CSP) restrictions</li>\
+      </ul>\
+      <p style="margin-top:20px;"><em>Quick fix: Start a local server with <code>python -m http.server 8000</code> then visit <code>http://localhost:8000</code></em></p>\
+      </div>';
+  }
 </script>
 </body>
 </html>
