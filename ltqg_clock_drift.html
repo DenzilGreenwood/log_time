@@ -32,6 +32,7 @@
     Two clocks orbit at different radii. Watch how they drift apart!<br>
     <strong>σ-uniform:</strong> Equal Δσ → Different Δτ (LTQG natural)<br>
     <strong>τ-uniform:</strong> Equal Δτ → Different Δσ (Classical natural)<br>
+    <strong>t-uniform:</strong> Equal Δt → Asymptotic Δσ (Shows GR limit)<br>
     <em>Key insight: Clock synchronization depends on choice of time coordinate!</em>
   </div>
   <div class="row"><label>Schwarzschild radius r<sub>s</sub></label>
@@ -46,12 +47,16 @@
   <div class="row">
     <button id="modeSigma" class="btn active">σ-uniform</button>
     <button id="modeTau"   class="btn">τ-uniform</button>
+    <button id="modeDt"    class="btn">t-uniform</button>
   </div>
   <div class="row">
     <label>Δσ per frame</label><input id="dSigma" type="range" min="0.0005" max="0.02" step="0.0005" value="0.004">
   </div>
   <div class="row">
     <label>Δτ per frame</label><input id="dTau" type="range" min="0.001" max="0.2" step="0.001" value="0.02">
+  </div>
+  <div class="row">
+    <label>Δt per frame</label><input id="dT" type="range" min="0.001" max="0.2" step="0.001" value="0.02">
   </div>
   <div class="row">
     <label>τ<sub>0</sub> (base)</label><input id="tau0" type="range" min="0.2" max="5.0" step="0.1" value="1.0">
@@ -68,6 +73,16 @@
     <button id="presetEarth" class="btn">🌍 Earth-like</button>
     <button id="presetExtreme" class="btn">⚫ Near-horizon</button>
     <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  <div class="row">
+    <button id="toggleBigBang" class="btn active">⚛️ Big Bang</button>
+    <button id="toggleWormhole" class="btn active">🌠 Wormhole</button>
+    <button id="toggleDeSitter" class="btn active">🌌 de Sitter</button>
+  </div>
+  <div class="row">
+    <button id="toggleQuantum" class="btn active">🔬 Quantum Well</button>
+    <button id="toggleGWaves" class="btn active">🌊 σ-GW Funnel</button>
+    <span class="pill small" id="moduleStatus">5 modules active</span>
   </div>
   <div class="small" id="readout"></div>
 </div>
@@ -93,6 +108,7 @@
   renderer.setClearColor(0x0f1419, 1);
 
   const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.02); // Atmospheric depth effect
   const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(0, 6.5, 12);
   camera.lookAt(0,0,0);
@@ -119,17 +135,276 @@
     scene.add(horizon);
   }
 
-  // ----- rings
+  // ----- rings with σ-contour overlay
   const rings = new THREE.Group();
   for (let i=1;i<=12;i++){
     const R = i*0.75;
     const g = new THREE.RingGeometry(R-0.005, R+0.005, 128);
-    const m = new THREE.MeshBasicMaterial({color:0x334155, opacity:(i%2===0?0.4:0.25), transparent:true, side:THREE.DoubleSide});
+    const opacity = i % 2 === 0 ? 0.4 : 0.25;
+    const m = new THREE.MeshBasicMaterial({color:0x334155, opacity, transparent:true, side:THREE.DoubleSide});
     const mesh = new THREE.Mesh(g,m);
     mesh.rotation.x = -Math.PI/2;
     rings.add(mesh);
   }
   scene.add(rings);
+
+  // σ-contour grid (logarithmic fade)
+  const sigmaContours = new THREE.Group();
+  for (let i=1; i<=8; i++) {
+    const logR = Math.exp(i * 0.5); // Logarithmic spacing
+    const opacity = Math.max(0.05, 0.3 * Math.exp(-i * 0.3)); // Exponential fade
+    const g = new THREE.RingGeometry(logR-0.002, logR+0.002, 64);
+    const m = new THREE.MeshBasicMaterial({
+      color: 0x4fc3f7, 
+      opacity: opacity, 
+      transparent: true, 
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.rotation.x = -Math.PI/2;
+    mesh.position.y = 0.01; // Slightly above ground rings
+    sigmaContours.add(mesh);
+  }
+  scene.add(sigmaContours);
+
+  // ⚛️ 1) Big-Bang "Reverse Funnel" (WebGL)
+  // Idea: flare outward with a(σ) = e^{nσ}
+  const nBB = 0.5;            // radiation-like epoch (n=1/2). Try 2/3 for matter.
+  const kBB = 4.0;            // vertical scale (visual)
+  const r0BB = 0.25;          // throat radius at early σ (finite)
+  const hBB  = 6.0;           // mesh height in scene units
+  const segR = 96, segH = 160;
+
+  let bigBangMesh;
+  (function makeBigBang(){
+    const geom = new THREE.CylinderGeometry(r0BB, r0BB, hBB, segR, segH, true);
+    const mat  = new THREE.MeshStandardMaterial({
+      color: 0x8ab4ff, emissive: 0x081e3a, roughness: 0.85, metalness: 0.05,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.42, wireframe: true
+    });
+    bigBangMesh = new THREE.Mesh(geom, mat);
+    bigBangMesh.position.set(-6.0, 0, 0);       // move left of BH funnel
+    scene.add(bigBangMesh);
+  })();
+
+  // 🌠 2) Wormhole / Einstein–Rosen Bridge
+  // Two funnels glued at a finite σ-throat using z(r,σ) = √(r²/r₀² - 1) e^{-|σ|/κ}
+  const r0WH = 1.0, kWH = 4.0;
+  let whUpper, whLower;
+
+  function makeWH(){
+    const segR=96, segH=160, H=5.0;
+    const g = new THREE.CylinderGeometry(r0WH, 2.5, H, segR, segH, true);
+    const m = new THREE.MeshStandardMaterial({ 
+      color:0xb39ddb, wireframe:true, transparent:true, opacity:0.5, 
+      side:THREE.DoubleSide, emissive: 0x1a0d26 
+    });
+    whUpper = new THREE.Mesh(g,m); 
+    whLower = new THREE.Mesh(g.clone(), m.clone());
+    whUpper.position.set(6.0,  1.5, 0);
+    whLower.position.set(6.0, -1.5, 0);
+    whLower.rotation.x = Math.PI;
+    scene.add(whUpper, whLower);
+  }
+  makeWH();
+
+  // 🌌 5) de Sitter Expansion "Bubble"
+  // Use a(σ) = exp(H τ₀ e^σ). Scale a transparent sphere; modulate surface brightness with 1/a.
+  const H = 0.15, tau0dS = 1.0;
+  const bubble = new THREE.Mesh(
+    new THREE.SphereGeometry(1.0, 48, 32),
+    new THREE.MeshStandardMaterial({ 
+      color:0x90caf9, transparent:true, opacity:0.25, roughness:1,
+      emissive: 0x0a1a2e
+    })
+  );
+  bubble.position.set(0, 0, -7);
+  scene.add(bubble);
+
+  // ⚛️ 4) 1D Quantum Well in σ (WebGL visualization)
+  const N = 256;          // grid points
+  const dx = 0.1;         // spatial step
+  const dtSigma = 0.01;   // σ-evolution step
+  let quantumWell, quantumWorker;
+  
+  // Create initial Gaussian wave packet
+  const x0 = N * dx / 2;  // center position
+  const sigma_packet = 1.0; // wave packet width
+  const k0 = 2.0;         // initial momentum
+  
+  let psiRe = new Float32Array(N);
+  let psiIm = new Float32Array(N);
+  let Varr = new Float32Array(N);  // potential array
+  
+  // Initialize harmonic oscillator potential: V(x) = 0.5 * m * ω² * (x-x0)²
+  const omega = 1.0;
+  for (let i = 0; i < N; i++) {
+    const x = i * dx;
+    Varr[i] = 0.5 * omega * omega * (x - x0) * (x - x0);
+    
+    // Gaussian wave packet
+    const dx_rel = x - x0;
+    const norm = Math.pow(2*Math.PI*sigma_packet*sigma_packet, -0.25);
+    const envelope = norm * Math.exp(-dx_rel*dx_rel / (4*sigma_packet*sigma_packet));
+    psiRe[i] = envelope * Math.cos(k0 * dx_rel);
+    psiIm[i] = envelope * Math.sin(k0 * dx_rel);
+  }
+  
+  // Create visualization line
+  const quantumGeom = new THREE.BufferGeometry();
+  const positions = new Float32Array(N * 3);
+  const colors = new Float32Array(N * 3);
+  
+  for (let i = 0; i < N; i++) {
+    positions[i*3] = (i - N/2) * dx * 0.1; // x position (scaled)
+    positions[i*3+1] = 0;                   // y position (will be updated)
+    positions[i*3+2] = -10;                 // z position (back)
+    
+    // Color based on probability density
+    const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+    colors[i*3] = prob * 5.0;    // red
+    colors[i*3+1] = prob * 2.0;  // green  
+    colors[i*3+2] = 1.0;         // blue
+  }
+  
+  quantumGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  quantumGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  
+  const quantumMat = new THREE.LineBasicMaterial({ 
+    vertexColors: true, 
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.8
+  });
+  quantumWell = new THREE.Line(quantumGeom, quantumMat);
+  scene.add(quantumWell);
+  
+  // Initialize quantum worker (inline to avoid path/CORS issues)
+  let quantumState = {sigma: -2.0, running: false};
+  const workerSrc = `
+self.onmessage = (e)=>{
+  const {N, dx, dtSigma, steps, tau0, sigma0, Varr, psiRe, psiIm} = e.data;
+  const hbar=1.0, m=1.0; let sigma = sigma0;
+  const Re = Float64Array.from(psiRe), Im = Float64Array.from(psiIm);
+  const lap = (arr,i,N,dx)=> (arr[(i+1)%N]-2*arr[i]+arr[(i-1+N)%N])/(dx*dx);
+  for (let n=0;n<steps;n++){
+    const tauEff = tau0 * Math.exp(sigma);
+    for (let i=0;i<N;i++){
+      const HRe = -(hbar*hbar/(2*m))*lap(Re,i,N,dx) + Varr[i]*Re[i];
+      const HIm = -(hbar*hbar/(2*m))*lap(Im,i,N,dx) + Varr[i]*Im[i];
+      const dRe = -(tauEff*dtSigma/hbar) * HIm;
+      const dIm =  (tauEff*dtSigma/hbar) * HRe;
+      Re[i]+=dRe; Im[i]+=dIm;
+    }
+    sigma += dtSigma;
+    if (n%8===0) postMessage({sigma, Re, Im});
+  }
+  postMessage({done:true, sigma, Re, Im});
+};`;
+  
+  try {
+    const blobURL = URL.createObjectURL(new Blob([workerSrc], {type:'text/javascript'}));
+    quantumWorker = new Worker(blobURL);
+    
+    quantumWorker.onmessage = (e) => {
+      const {sigma, Re, Im, done} = e.data;
+      quantumState.sigma = sigma;
+      
+      // Update local state for next evolution
+      psiRe = Float32Array.from(Re);
+      psiIm = Float32Array.from(Im);
+      
+      // Update visualization
+      const positions = quantumWell.geometry.attributes.position.array;
+      const colors = quantumWell.geometry.attributes.color.array;
+      
+      for (let i = 0; i < N; i++) {
+        const prob = Re[i]*Re[i] + Im[i]*Im[i];
+        positions[i*3+1] = prob * 2.0; // height based on probability
+        
+        colors[i*3] = Math.min(1.0, prob * 10.0);   // red
+        colors[i*3+1] = Math.min(1.0, prob * 5.0);  // green
+        colors[i*3+2] = 0.8;                        // blue
+      }
+      
+      quantumWell.geometry.attributes.position.needsUpdate = true;
+      quantumWell.geometry.attributes.color.needsUpdate = true;
+      
+      if (done) {
+        quantumState.running = false;
+      }
+    };
+    
+    quantumWorker.onerror = ()=> { 
+      moduleStates.quantum = false; 
+      if (quantumWell) quantumWell.visible = false; 
+      ui.toggleQuantum.classList.remove('active'); 
+      updateModuleStatus(); 
+    };
+  } catch (error) {
+    console.log('Quantum worker not available, continuing without σ-QM demo');
+    moduleStates.quantum = false;
+    if (quantumWell) quantumWell.visible = false;
+    ui.toggleQuantum.classList.remove('active');
+  }
+
+  // ⚙️ 6) σ-Gravitational Wave on the Funnel (vertex shader)
+  // Amplitude A(σ) = A₀ e^{-γ e^σ}, phase kr - ωt
+  const gwVertexShader = `
+    uniform float A0, gamma, sigma, kWave, omega, t;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    
+    void main() {
+      float A = A0 * exp(-gamma * exp(sigma));   // σ-damping
+      float phase = kWave * length(position.xz) - omega * t;
+      vec3 pos = position;
+      pos.y += A * sin(phase);
+      
+      vPosition = pos;
+      vNormal = normal;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }
+  `;
+  
+  const gwFragmentShader = `
+    uniform float sigma;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    
+    void main() {
+      vec3 color = vec3(0.4, 0.7, 1.0);
+      float intensity = dot(vNormal, normalize(vec3(1.0, 1.0, 1.0)));
+      intensity = max(0.1, intensity);
+      
+      // Modulate color with σ-evolution
+      float sigmaFactor = exp(-abs(sigma) * 0.2);
+      color *= (0.5 + 0.5 * sigmaFactor);
+      
+      gl_FragColor = vec4(color * intensity, 0.6);
+    }
+  `;
+  
+  // Create gravitational wave funnel
+  const gwGeometry = new THREE.CylinderGeometry(0.1, 3.0, 4.0, 64, 32, true);
+  const gwMaterial = new THREE.ShaderMaterial({
+    vertexShader: gwVertexShader,
+    fragmentShader: gwFragmentShader,
+    uniforms: {
+      A0: { value: 0.1 },
+      gamma: { value: 0.5 },
+      sigma: { value: 0.0 },
+      kWave: { value: 2.0 },
+      omega: { value: 3.0 },
+      t: { value: 0.0 }
+    },
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+  
+  const gwFunnel = new THREE.Mesh(gwGeometry, gwMaterial);
+  gwFunnel.position.set(8.0, 0, 2.0);  // Position to the right
+  scene.add(gwFunnel);
 
   // ----- tracks + beads
   const nearTrack = new THREE.Mesh(new THREE.TorusGeometry(1, 0.01, 8, 256),
@@ -151,7 +426,7 @@
   const tauTicks   = new THREE.Group(); scene.add(tauTicks);
   function tickSprite(colorHex=0xffffff){
     const g = new THREE.SphereGeometry(0.03, 12, 12);
-    const m = new THREE.MeshBasicMaterial({color: colorHex});
+    const m = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1.0 });
     return new THREE.Mesh(g,m);
   }
 
@@ -159,16 +434,23 @@
   const $ = id => document.getElementById(id);
   const ui = {
     rs: $('rs'), rnear: $('rnear'), rfar: $('rfar'),
-    omega: $('omega'), dSigma: $('dSigma'), dTau: $('dTau'), tau0: $('tau0'),
-    modeSigma: $('modeSigma'), modeTau: $('modeTau'),
+    omega: $('omega'), dSigma: $('dSigma'), dTau: $('dTau'), dT: $('dT'), tau0: $('tau0'),
+    modeSigma: $('modeSigma'), modeTau: $('modeTau'), modeDt: $('modeDt'),
     showSigmaTicks: $('showSigmaTicks'), showTauTicks: $('showTauTicks'),
     resetClocks: $('resetClocks'), presetEarth: $('presetEarth'), presetExtreme: $('presetExtreme'),
+    autoOrbit: $('autoOrbit'), exportData: $('exportData'),
+    toggleBigBang: $('toggleBigBang'), toggleWormhole: $('toggleWormhole'),
+    toggleDeSitter: $('toggleDeSitter'), toggleQuantum: $('toggleQuantum'),
+    toggleGWaves: $('toggleGWaves'), moduleStatus: $('moduleStatus'),
     readout: $('readout'), deltaSigmaLabel: $('deltaSigmaLabel')
   };
 
   let mode = 'sigma';
-  ui.modeSigma.onclick = ()=>{ mode='sigma'; ui.modeSigma.classList.add('active'); ui.modeTau.classList.remove('active'); };
-  ui.modeTau.onclick   = ()=>{ mode='tau';   ui.modeTau.classList.add('active');   ui.modeSigma.classList.remove('active'); };
+  let autoOrbitEnabled = false;
+  let dataExportArray = []; // For collecting Δσ data over time
+  ui.modeSigma.onclick = ()=>{ mode='sigma'; ui.modeSigma.classList.add('active'); ui.modeTau.classList.remove('active'); ui.modeDt.classList.remove('active'); };
+  ui.modeTau.onclick   = ()=>{ mode='tau';   ui.modeTau.classList.add('active');   ui.modeSigma.classList.remove('active'); ui.modeDt.classList.remove('active'); };
+  ui.modeDt.onclick    = ()=>{ mode='dt';    ui.modeDt.classList.add('active');    ui.modeSigma.classList.remove('active'); ui.modeTau.classList.remove('active'); };
 
   let drawSigmaTicks = false, drawTauTicks = false;
   ui.showSigmaTicks.onclick = ()=>{ drawSigmaTicks = !drawSigmaTicks; ui.showSigmaTicks.classList.toggle('active', drawSigmaTicks); };
@@ -190,15 +472,33 @@
   function alpha(rs, r){ return Math.sqrt(Math.max(1e-9, 1.0 - rs/r)); }
 
   function placeBead(mesh, R, theta){ mesh.position.set(R*Math.cos(theta), 0, R*Math.sin(theta)); }
+  
   function addTick(group, R, theta, color){
     const s = tickSprite(color);
     s.position.set(R*Math.cos(theta), 0, R*Math.sin(theta));
+    s.userData.age = 0; // Track age for fading
+    s.userData.maxAge = 300; // Frames before removal
     group.add(s);
     if (group.children.length > 400) {
       const child = group.children[0];
       group.remove(child);
       child.geometry.dispose();
       child.material.dispose();
+    }
+  }
+
+  // Update tick opacity based on age (decay effect)
+  function updateTickDecay(group) {
+    for (let i = group.children.length - 1; i >= 0; i--) {
+      const tick = group.children[i];
+      tick.userData.age = (tick.userData.age || 0) + 1;
+      const ageRatio = tick.userData.age / (tick.userData.maxAge || 300);
+      tick.material.opacity = Math.max(0.1, 1.0 - ageRatio * 0.8);
+      if (ageRatio >= 1.0) {
+        group.remove(tick);
+        tick.geometry.dispose();
+        tick.material.dispose();
+      }
     }
   }
 
@@ -238,6 +538,91 @@
   ui.presetEarth.onclick = ()=>{ ui.rs.value=1.0; ui.rnear.value=1.5; ui.rfar.value=4.0; ui.omega.value=0.5; updateGeometry(); };
   ui.presetExtreme.onclick = ()=>{ ui.rs.value=2.0; ui.rnear.value=2.1; ui.rfar.value=3.5; ui.omega.value=1.5; updateGeometry(); };
 
+  // Auto-orbit toggle
+  ui.autoOrbit.onclick = ()=>{
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  // Data export functionality
+  ui.exportData.onclick = ()=>{
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      mode: mode,
+      parameters: {
+        rs: parseFloat(ui.rs.value),
+        rnear: parseFloat(ui.rnear.value),
+        rfar: parseFloat(ui.rfar.value),
+        omega: parseFloat(ui.omega.value),
+        tau0: tau0
+      },
+      deltaValues: dataExportArray.slice(-100) // Last 100 measurements
+    };
+    console.log('LTQG Clock Drift Data Export:', JSON.stringify(exportData, null, 2));
+    console.log('Copy the above data to analyze σ-offset curves numerically');
+    
+    // Also create a downloadable file
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_clock_data_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Module toggle controls
+  let moduleStates = {
+    bigBang: true,
+    wormhole: true,
+    deSitter: true,
+    quantum: true,
+    gwaves: true
+  };
+
+  ui.toggleBigBang.onclick = ()=> {
+    moduleStates.bigBang = !moduleStates.bigBang;
+    bigBangMesh.visible = moduleStates.bigBang;
+    if (bigBangMesh.userData.points) bigBangMesh.userData.points.visible = moduleStates.bigBang;
+    ui.toggleBigBang.classList.toggle('active', moduleStates.bigBang);
+    updateModuleStatus();
+  };
+
+  ui.toggleWormhole.onclick = ()=> {
+    moduleStates.wormhole = !moduleStates.wormhole;
+    whUpper.visible = moduleStates.wormhole;
+    whLower.visible = moduleStates.wormhole;
+    ui.toggleWormhole.classList.toggle('active', moduleStates.wormhole);
+    updateModuleStatus();
+  };
+
+  ui.toggleDeSitter.onclick = ()=> {
+    moduleStates.deSitter = !moduleStates.deSitter;
+    bubble.visible = moduleStates.deSitter;
+    ui.toggleDeSitter.classList.toggle('active', moduleStates.deSitter);
+    updateModuleStatus();
+  };
+
+  ui.toggleQuantum.onclick = ()=> {
+    moduleStates.quantum = !moduleStates.quantum;
+    if (quantumWell) quantumWell.visible = moduleStates.quantum;
+    ui.toggleQuantum.classList.toggle('active', moduleStates.quantum);
+    updateModuleStatus();
+  };
+
+  ui.toggleGWaves.onclick = ()=> {
+    moduleStates.gwaves = !moduleStates.gwaves;
+    gwFunnel.visible = moduleStates.gwaves;
+    ui.toggleGWaves.classList.toggle('active', moduleStates.gwaves);
+    updateModuleStatus();
+  };
+
+  function updateModuleStatus() {
+    const activeCount = Object.values(moduleStates).filter(Boolean).length;
+    ui.moduleStatus.textContent = `${activeCount} modules active`;
+  }
+
   // evolution helpers
   function dt_from_sigma(tau, dSigma, rs, r){
     const a = alpha(rs, r);
@@ -251,6 +636,14 @@
     const rfar = parseFloat(ui.rfar.value);
     const anear = alpha(rs, rnear), afar = alpha(rs, rfar);
     const Omega = parseFloat(ui.omega.value);
+
+    // Auto-orbit camera motion
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.5;
+    } else {
+      controls.autoRotate = false;
+    }
 
     if (mode === 'sigma'){
       const dSigma = parseFloat(ui.dSigma.value);
@@ -267,7 +660,7 @@
         while (sigmaNear >= nextSigmaTickNear + dSigmaTick){ nextSigmaTickNear += dSigmaTick; addTick(sigmaTicks, rnear, thetaNear, 0xffc46b); }
         while (sigmaFar  >= nextSigmaTickFar  + dSigmaTick){ nextSigmaTickFar  += dSigmaTick; addTick(sigmaTicks, rfar,  thetaFar,  0x9bd1ff); }
       }
-    } else {
+    } else if (mode === 'tau') {
       const dTau = parseFloat(ui.dTau.value);
       tauNear += dTau; tauFar += dTau;
       sigmaNear = Math.log(tauNear / tau0);
@@ -282,7 +675,26 @@
         while (tauNear >= nextTauTickNear + dTauTick){ nextTauTickNear += dTauTick; addTick(tauTicks, rnear, thetaNear, 0xffc46b); }
         while (tauFar  >= nextTauTickFar  + dTauTick){ nextTauTickFar  += dTauTick; addTick(tauTicks, rfar,  thetaFar,  0x9bd1ff); }
       }
+    } else if (mode === 'dt') {
+      const dT = parseFloat(ui.dT.value);
+      // equal coordinate-time step
+      tauNear += anear * dT;
+      tauFar  += afar  * dT;
+      sigmaNear = Math.log(tauNear / tau0);
+      sigmaFar  = Math.log(tauFar  / tau0);
+      // same dt base for both angles
+      thetaNear += Omega * dT;
+      thetaFar  += Omega * dT;
+
+      if (drawTauTicks){  // reuse τ-ticks for dt mode
+        while (tauNear >= nextTauTickNear + dTauTick){ nextTauTickNear += dTauTick; addTick(tauTicks, rnear, thetaNear, 0xffc46b); }
+        while (tauFar  >= nextTauTickFar  + dTauTick){ nextTauTickFar  += dTauTick; addTick(tauTicks, rfar,  thetaFar,  0x9bd1ff); }
+      }
     }
+
+    // Update tick decay for fading effect
+    updateTickDecay(sigmaTicks);
+    updateTickDecay(tauTicks);
 
     // bead placement
     placeBead(nearBead, parseFloat(ui.rnear.value), thetaNear);
@@ -291,9 +703,32 @@
     // readout with enhanced physics display
     const deltaSigma = (sigmaFar - sigmaNear);
     const deltaTheta = thetaFar - thetaNear;
-    const theoreticalDeltaSigma = Math.log(afar / anear);
+    let theory = '—';
+    if (mode === 'sigma' || mode === 'tau') {
+      theory = '0.0000';
+    } else if (mode === 'dt') {
+      theory = Math.log(afar / anear).toFixed(4);
+    }
     
-    ui.deltaSigmaLabel.textContent = `Δσ = ${deltaSigma.toFixed(4)} (theory: ${theoreticalDeltaSigma.toFixed(4)})`;
+    // Collect data for export
+    dataExportArray.push({
+      time: performance.now(),
+      mode: mode,
+      deltaSigma: deltaSigma,
+      theoreticalDeltaSigma: theory,
+      deltaTheta: deltaTheta,
+      sigmaNear: sigmaNear,
+      sigmaFar: sigmaFar,
+      tauNear: tauNear,
+      tauFar: tauFar
+    });
+    
+    // Keep only recent data to prevent memory bloat
+    if (dataExportArray.length > 1000) {
+      dataExportArray = dataExportArray.slice(-500);
+    }
+    
+    ui.deltaSigmaLabel.textContent = `Δσ = ${deltaSigma.toFixed(4)} (theory: ${theory})`;
     
     ui.readout.innerHTML = `
       <div><strong>Gravitational Factors:</strong></div>
@@ -306,9 +741,76 @@
       <div><strong>Angular Drift:</strong></div>
       <div>Δθ = ${deltaTheta.toFixed(3)} rad = ${(deltaTheta * 180/Math.PI).toFixed(1)}°</div>
       <div style="margin-top:8px; font-size:11px; opacity:0.7;">
-        ${mode === 'sigma' ? 'LTQG: Equal Δσ → Different orbital rates' : 'Classical: Equal Δτ → Different σ accumulation'}
+        ${mode === 'sigma' ? 'LTQG: Equal Δσ → Finite offset regularization' : 
+          mode === 'tau' ? 'Classical: Equal Δτ → Divergent near-horizon behavior' :
+          'Coordinate: Equal Δt → Asymptotic Δσ = ln(α_far/α_near)'}
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points collected: ${dataExportArray.length}
       </div>
     `;
+
+    // ⚛️ Module Updates ⚛️
+    
+    // Big Bang reverse funnel update
+    const sigmaBB = (performance.now()*0.00005); // demo auto-run; or bind to UI
+    const aBB = Math.exp(nBB * sigmaBB);         // a(σ) = e^{nσ}
+    const Rsigma = (r0BB + 0.08) * aBB;          // flaring radius
+    const S = Rsigma / r0BB;                      // uniform radial swell
+    bigBangMesh.scale.set(S, 1.0 + (Math.log(aBB)/kBB), S);
+
+    // optional: comoving "galaxies"
+    if (!bigBangMesh.userData.points) {
+      const count = 600;
+      const arr = new Float32Array(count*3);
+      for (let i=0;i<count;i++){
+        // random disk around the throat (y=0), expand via scale each frame
+        const r = r0BB * (0.3 + Math.random()*0.7);
+        const th = Math.random()*Math.PI*2;
+        arr[3*i]   = r*Math.cos(th);
+        arr[3*i+1] = (Math.random()-0.5)*0.05; // thin layer
+        arr[3*i+2] = r*Math.sin(th);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(arr,3));
+      const m = new THREE.PointsMaterial({ size: 0.03, color: 0xffe082 });
+      const pts = new THREE.Points(g,m);
+      pts.position.copy(bigBangMesh.position);
+      scene.add(pts); bigBangMesh.userData.points = pts;
+    }
+    // expand comoving points ∝ a(σ)
+    const pts = bigBangMesh.userData.points;
+    pts.scale.set(aBB, 1.0, aBB);
+
+    // Wormhole update
+    const sigmaWH = (performance.now()*0.00006-4.0);
+    const shrink = Math.exp(-Math.abs(sigmaWH)/kWH);
+    whUpper.scale.set(shrink, 1.0, shrink);
+    whLower.scale.set(shrink, 1.0, shrink);
+
+    // de Sitter bubble update
+    const sigmaDeSitter = performance.now()*0.00005 - 6.0;
+    const a = Math.exp(H * tau0dS * Math.exp(sigmaDeSitter));
+    const Sbubble = Math.min(50, a);      // clamp for display
+    bubble.scale.set(Sbubble, Sbubble, Sbubble);
+    bubble.material.opacity = Math.max(0.08, Math.min(0.5, 1.0/Math.sqrt(a)));
+
+    // Quantum well σ-evolution update
+    if (quantumWorker && !quantumState.running && quantumState.sigma < 4.0) {
+      quantumState.running = true;
+      quantumWorker.postMessage({
+        N, dx, dtSigma: 0.005, steps: 50, 
+        tau0: 1.0, sigma0: quantumState.sigma,
+        Varr: Array.from(Varr), 
+        psiRe: Array.from(psiRe), 
+        psiIm: Array.from(psiIm)
+      });
+    }
+
+    // σ-Gravitational wave funnel update
+    const currentSigma = (performance.now() * 0.0001) - 3.0; // σ evolution
+    gwFunnel.material.uniforms.sigma.value = currentSigma;
+    gwFunnel.material.uniforms.t.value = performance.now() * 0.001;
 
     controls.update();
     renderer.render(scene, camera);
