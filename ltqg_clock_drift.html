@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — Near-Horizon Quantum Clock Drift</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 360px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 180px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+  .pill { display:inline-block; padding:2px 8px; background:#1d2636; border:1px solid #2a3950; border-radius:999px; font-size:12px; margin-left:6px;}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>LTQG Clock Drift</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    Two clocks orbit at different radii. Watch how they drift apart!<br>
+    <strong>σ-uniform:</strong> Equal Δσ → Different Δτ (LTQG natural)<br>
+    <strong>τ-uniform:</strong> Equal Δτ → Different Δσ (Classical natural)<br>
+    <em>Key insight: Clock synchronization depends on choice of time coordinate!</em>
+  </div>
+  <div class="row"><label>Schwarzschild radius r<sub>s</sub></label>
+    <input id="rs" type="range" min="0.8" max="3.0" step="0.01" value="1.0"></div>
+  <div class="row"><label>r<sub>near</sub> (≥ r<sub>s</sub>+)</label>
+    <input id="rnear" type="range" min="1.05" max="4.0" step="0.01" value="1.2"></div>
+  <div class="row"><label>r<sub>far</sub></label>
+    <input id="rfar" type="range" min="2.0" max="8.0" step="0.01" value="5.0"></div>
+  <div class="row"><label>Ω (angular rate)</label>
+    <input id="omega" type="range" min="0.1" max="3.0" step="0.01" value="1.0"></div>
+
+  <div class="row">
+    <button id="modeSigma" class="btn active">σ-uniform</button>
+    <button id="modeTau"   class="btn">τ-uniform</button>
+  </div>
+  <div class="row">
+    <label>Δσ per frame</label><input id="dSigma" type="range" min="0.0005" max="0.02" step="0.0005" value="0.004">
+  </div>
+  <div class="row">
+    <label>Δτ per frame</label><input id="dTau" type="range" min="0.001" max="0.2" step="0.001" value="0.02">
+  </div>
+  <div class="row">
+    <label>τ<sub>0</sub> (base)</label><input id="tau0" type="range" min="0.2" max="5.0" step="0.1" value="1.0">
+  </div>
+
+  <div class="row">
+    <button id="showSigmaTicks" class="btn">σ-ticks</button>
+    <button id="showTauTicks" class="btn">τ-ticks</button>
+    <button id="resetClocks" class="btn">🔄 Reset</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+    <span class="pill small" id="deltaSigmaLabel">Δσ = —</span>
+  </div>
+  <div class="row">
+    <button id="presetEarth" class="btn">🌍 Earth-like</button>
+    <button id="presetExtreme" class="btn">⚫ Near-horizon</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  <div class="small" id="readout"></div>
+</div>
+
+<!-- Three.js -->
+<!-- Use ES modules with importmap for proper module resolution -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 6.5, 12);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(5, 10, 8);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.25));
+
+  // ----- horizon
+  let horizon;
+  function makeHorizon(rs) {
+    if (horizon) {
+      horizon.geometry.dispose();
+      horizon.material.dispose();
+      scene.remove(horizon);
+    }
+    const geom = new THREE.CylinderGeometry(rs, rs, 2.0, 96, 1, true);
+    const mat  = new THREE.MeshStandardMaterial({color:0xff5577, transparent:true, opacity:0.35, side:THREE.DoubleSide});
+    horizon = new THREE.Mesh(geom, mat);
+    horizon.position.y = -1.0;
+    scene.add(horizon);
+  }
+
+  // ----- rings
+  const rings = new THREE.Group();
+  for (let i=1;i<=12;i++){
+    const R = i*0.75;
+    const g = new THREE.RingGeometry(R-0.005, R+0.005, 128);
+    const m = new THREE.MeshBasicMaterial({color:0x334155, opacity:(i%2===0?0.4:0.25), transparent:true, side:THREE.DoubleSide});
+    const mesh = new THREE.Mesh(g,m);
+    mesh.rotation.x = -Math.PI/2;
+    rings.add(mesh);
+  }
+  scene.add(rings);
+
+  // ----- tracks + beads
+  const nearTrack = new THREE.Mesh(new THREE.TorusGeometry(1, 0.01, 8, 256),
+                                   new THREE.MeshBasicMaterial({color:0xffa857}));
+  nearTrack.rotation.x = Math.PI/2;
+  const farTrack  = new THREE.Mesh(new THREE.TorusGeometry(5, 0.01, 8, 256),
+                                   new THREE.MeshBasicMaterial({color:0x6cb3ff}));
+  farTrack.rotation.x = Math.PI/2;
+  scene.add(nearTrack, farTrack);
+
+  const nearBead = new THREE.Mesh(new THREE.SphereGeometry(0.07,32,16),
+                    new THREE.MeshStandardMaterial({color:0xffc46b, emissive:0x331800, roughness:0.4, metalness:0.2}));
+  const farBead  = new THREE.Mesh(new THREE.SphereGeometry(0.07,32,16),
+                    new THREE.MeshStandardMaterial({color:0x9bd1ff, emissive:0x001a33, roughness:0.4, metalness:0.2}));
+  scene.add(nearBead, farBead);
+
+  // ----- ticks
+  const sigmaTicks = new THREE.Group(); scene.add(sigmaTicks);
+  const tauTicks   = new THREE.Group(); scene.add(tauTicks);
+  function tickSprite(colorHex=0xffffff){
+    const g = new THREE.SphereGeometry(0.03, 12, 12);
+    const m = new THREE.MeshBasicMaterial({color: colorHex});
+    return new THREE.Mesh(g,m);
+  }
+
+  // ----- UI bindings
+  const $ = id => document.getElementById(id);
+  const ui = {
+    rs: $('rs'), rnear: $('rnear'), rfar: $('rfar'),
+    omega: $('omega'), dSigma: $('dSigma'), dTau: $('dTau'), tau0: $('tau0'),
+    modeSigma: $('modeSigma'), modeTau: $('modeTau'),
+    showSigmaTicks: $('showSigmaTicks'), showTauTicks: $('showTauTicks'),
+    resetClocks: $('resetClocks'), presetEarth: $('presetEarth'), presetExtreme: $('presetExtreme'),
+    readout: $('readout'), deltaSigmaLabel: $('deltaSigmaLabel')
+  };
+
+  let mode = 'sigma';
+  ui.modeSigma.onclick = ()=>{ mode='sigma'; ui.modeSigma.classList.add('active'); ui.modeTau.classList.remove('active'); };
+  ui.modeTau.onclick   = ()=>{ mode='tau';   ui.modeTau.classList.add('active');   ui.modeSigma.classList.remove('active'); };
+
+  let drawSigmaTicks = false, drawTauTicks = false;
+  ui.showSigmaTicks.onclick = ()=>{ drawSigmaTicks = !drawSigmaTicks; ui.showSigmaTicks.classList.toggle('active', drawSigmaTicks); };
+  ui.showTauTicks.onclick   = ()=>{ drawTauTicks   = !drawTauTicks;   ui.showTauTicks.classList.toggle('active', drawTauTicks);   };
+
+  // ----- physics state
+  let tau0 = parseFloat(ui.tau0.value);
+  let sigmaNear = Math.log(1.0 / tau0), sigmaFar = Math.log(1.0 / tau0);
+  let tauNear  = tau0 * Math.exp(sigmaNear);
+  let tauFar   = tau0 * Math.exp(sigmaFar);
+  let thetaNear = 0, thetaFar = 0;
+
+  // ticks state
+  let nextSigmaTickNear = sigmaNear, nextSigmaTickFar = sigmaFar;
+  let nextTauTickNear   = tauNear,  nextTauTickFar   = tauFar;
+  const dSigmaTick = 0.15;
+  const dTauTick   = 0.5;
+
+  function alpha(rs, r){ return Math.sqrt(Math.max(1e-9, 1.0 - rs/r)); }
+
+  function placeBead(mesh, R, theta){ mesh.position.set(R*Math.cos(theta), 0, R*Math.sin(theta)); }
+  function addTick(group, R, theta, color){
+    const s = tickSprite(color);
+    s.position.set(R*Math.cos(theta), 0, R*Math.sin(theta));
+    group.add(s);
+    if (group.children.length > 400) {
+      const child = group.children[0];
+      group.remove(child);
+      child.geometry.dispose();
+      child.material.dispose();
+    }
+  }
+
+  function updateGeometry(){
+    const rs   = parseFloat(ui.rs.value);
+    const rnear= Math.max(rs+0.05, parseFloat(ui.rnear.value));
+    const rfar = Math.max(rnear+0.1, parseFloat(ui.rfar.value));
+    makeHorizon(rs); // always rebuild to match slider
+
+    nearTrack.geometry.dispose();
+    nearTrack.geometry = new THREE.TorusGeometry(rnear, 0.01, 8, 256);
+    nearTrack.rotation.x = Math.PI/2;
+
+    farTrack.geometry.dispose();
+    farTrack.geometry = new THREE.TorusGeometry(rfar, 0.01, 8, 256);
+    farTrack.rotation.x = Math.PI/2;
+
+    rings.scale.setScalar(Math.max(1.0, rfar/5));
+  }
+  makeHorizon(parseFloat(ui.rs.value));
+  updateGeometry();
+  [ui.rs, ui.rnear, ui.rfar].forEach(el => el.addEventListener('input', updateGeometry));
+  ui.tau0.addEventListener('input', ()=>{ tau0 = parseFloat(ui.tau0.value); });
+
+  // reset & presets
+  ui.resetClocks.onclick = ()=>{
+    tau0 = parseFloat(ui.tau0.value);
+    sigmaNear = Math.log(1.0/tau0); sigmaFar = Math.log(1.0/tau0);
+    tauNear  = tau0 * Math.exp(sigmaNear); tauFar = tau0 * Math.exp(sigmaFar);
+    thetaNear = thetaFar = 0;
+    nextSigmaTickNear = sigmaNear; nextSigmaTickFar = sigmaFar;
+    nextTauTickNear   = tauNear;   nextTauTickFar   = tauFar;
+    // clear ticks with proper disposal
+    [...sigmaTicks.children].forEach(c=>{ sigmaTicks.remove(c); c.geometry.dispose(); c.material.dispose(); });
+    [...tauTicks.children].forEach(c=>{ tauTicks.remove(c); c.geometry.dispose(); c.material.dispose(); });
+  };
+  ui.presetEarth.onclick = ()=>{ ui.rs.value=1.0; ui.rnear.value=1.5; ui.rfar.value=4.0; ui.omega.value=0.5; updateGeometry(); };
+  ui.presetExtreme.onclick = ()=>{ ui.rs.value=2.0; ui.rnear.value=2.1; ui.rfar.value=3.5; ui.omega.value=1.5; updateGeometry(); };
+
+  // evolution helpers
+  function dt_from_sigma(tau, dSigma, rs, r){
+    const a = alpha(rs, r);
+    const dTau = tau * dSigma;        // dτ = τ dσ
+    return dTau / a;                  // dt = dτ / α
+  }
+
+  function animate(){
+    const rs   = parseFloat(ui.rs.value);
+    const rnear= parseFloat(ui.rnear.value);
+    const rfar = parseFloat(ui.rfar.value);
+    const anear = alpha(rs, rnear), afar = alpha(rs, rfar);
+    const Omega = parseFloat(ui.omega.value);
+
+    if (mode === 'sigma'){
+      const dSigma = parseFloat(ui.dSigma.value);
+      sigmaNear += dSigma; sigmaFar += dSigma;
+      tauNear = tau0 * Math.exp(sigmaNear);
+      tauFar  = tau0 * Math.exp(sigmaFar);
+
+      const dtNear = dt_from_sigma(tauNear, dSigma, rs, rnear);
+      const dtFar  = dt_from_sigma(tauFar,  dSigma, rs, rfar);
+      thetaNear += Omega * dtNear;
+      thetaFar  += Omega * dtFar;
+
+      if (drawSigmaTicks){
+        while (sigmaNear >= nextSigmaTickNear + dSigmaTick){ nextSigmaTickNear += dSigmaTick; addTick(sigmaTicks, rnear, thetaNear, 0xffc46b); }
+        while (sigmaFar  >= nextSigmaTickFar  + dSigmaTick){ nextSigmaTickFar  += dSigmaTick; addTick(sigmaTicks, rfar,  thetaFar,  0x9bd1ff); }
+      }
+    } else {
+      const dTau = parseFloat(ui.dTau.value);
+      tauNear += dTau; tauFar += dTau;
+      sigmaNear = Math.log(tauNear / tau0);
+      sigmaFar  = Math.log(tauFar  / tau0);
+
+      const dtNear = dTau / anear;
+      const dtFar  = dTau / afar;
+      thetaNear += Omega * dtNear;
+      thetaFar  += Omega * dtFar;
+
+      if (drawTauTicks){
+        while (tauNear >= nextTauTickNear + dTauTick){ nextTauTickNear += dTauTick; addTick(tauTicks, rnear, thetaNear, 0xffc46b); }
+        while (tauFar  >= nextTauTickFar  + dTauTick){ nextTauTickFar  += dTauTick; addTick(tauTicks, rfar,  thetaFar,  0x9bd1ff); }
+      }
+    }
+
+    // bead placement
+    placeBead(nearBead, parseFloat(ui.rnear.value), thetaNear);
+    placeBead(farBead,  parseFloat(ui.rfar.value),  thetaFar);
+
+    // readout with enhanced physics display
+    const deltaSigma = (sigmaFar - sigmaNear);
+    const deltaTheta = thetaFar - thetaNear;
+    const theoreticalDeltaSigma = Math.log(afar / anear);
+    
+    ui.deltaSigmaLabel.textContent = `Δσ = ${deltaSigma.toFixed(4)} (theory: ${theoreticalDeltaSigma.toFixed(4)})`;
+    
+    ui.readout.innerHTML = `
+      <div><strong>Gravitational Factors:</strong></div>
+      <div>α<sub>near</sub> = √(1-r<sub>s</sub>/r<sub>near</sub>) = ${anear.toFixed(5)}</div>
+      <div>α<sub>far</sub> = √(1-r<sub>s</sub>/r<sub>far</sub>) = ${afar.toFixed(5)}</div>
+      <div><strong>Proper Times:</strong></div>
+      <div>τ<sub>near</sub> = ${tauNear.toExponential(3)} &nbsp; τ<sub>far</sub> = ${tauFar.toExponential(3)}</div>
+      <div><strong>Log-times:</strong></div>
+      <div>σ<sub>near</sub> = ${sigmaNear.toFixed(3)} &nbsp; σ<sub>far</sub> = ${sigmaFar.toFixed(3)}</div>
+      <div><strong>Angular Drift:</strong></div>
+      <div>Δθ = ${deltaTheta.toFixed(3)} rad = ${(deltaTheta * 180/Math.PI).toFixed(1)}°</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        ${mode === 'sigma' ? 'LTQG: Equal Δσ → Different orbital rates' : 'Classical: Equal Δτ → Different σ accumulation'}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
+

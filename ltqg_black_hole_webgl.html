@@ -190,7 +190,110 @@
     #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 2000; }
     .spinner { border: 3px solid rgba(79, 195, 247, 0.3); border-top: 3px solid #4fc3f7; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @media (max-width: 768px) { #controls { width: 280px; right: 10px; top: 70px; } #legend { display: none; } }
+    /* Tooltip styling */
+    .tooltip {
+      position: relative;
+      cursor: help;
+    }
+    
+    .tooltip:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 20, 25, 0.95);
+      color: #e8eaed;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 10000;
+      border: 1px solid rgba(79, 195, 247, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    
+    .tooltip:hover::before {
+      content: '';
+      position: absolute;
+      bottom: 95%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top: 5px solid rgba(15, 20, 25, 0.95);
+      z-index: 10000;
+    }
+
+    /* Preset buttons */
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    
+    .preset-btn {
+      background: linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex: 1;
+      min-width: 70px;
+    }
+    
+    .preset-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(156, 39, 176, 0.3);
+    }
+
+    /* Running total display */
+    .running-total {
+      background: rgba(76, 175, 80, 0.1);
+      border-radius: 6px;
+      padding: 6px;
+      margin-top: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #4caf50;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    /* High contrast mode */
+    .high-contrast {
+      filter: contrast(150%) brightness(120%);
+    }
+    
+    .high-contrast #controls,
+    .high-contrast #legend,
+    .high-contrast #additivity-panel,
+    .high-contrast #instrument-panel {
+      background: rgba(0, 0, 0, 0.95) !important;
+      border: 2px solid #fff !important;
+    }
+    
+    .high-contrast .button {
+      background: #000 !important;
+      color: #fff !important;
+      border: 2px solid #fff !important;
+    }
+
+    @media (max-width: 768px) { 
+      #controls { width: 280px; right: 10px; top: 70px; } 
+      #legend { display: none; } 
+      .tooltip:hover::after { 
+        position: fixed; 
+        bottom: 10px; 
+        left: 10px; 
+        right: 10px; 
+        transform: none; 
+        text-align: center; 
+      }
+    }
   </style>
 </head>
 <body>
@@ -208,7 +311,8 @@
         </div>
         <div class="control-group">
           <label for="speedSlider">Animation Speed</label>
-          <input type="range" id="speedSlider" class="slider" min="0.1" max="2.0" step="0.1" value="0.5">
+          <input type="range" id="speedSlider" class="slider" min="0" max="1" step="0.05" value="0.5" 
+                 aria-label="Animation speed control" aria-describedby="speedValue">
           <div id="speedValue" class="value-display">Speed: 0.5</div>
         </div>
       </div>
@@ -216,16 +320,28 @@
         <h3>Log-Time (σ)</h3>
         <div class="control-group">
           <label for="sigmaSlider">σ Value</label>
-          <input type="range" id="sigmaSlider" class="slider" min="-6" max="4" step="0.1" value="0">
+          <input type="range" id="sigmaSlider" class="slider" min="-6" max="4" step="0.1" value="0"
+                 aria-label="Log-time sigma coordinate" aria-describedby="sigmaValue">
           <div id="sigmaValue" class="value-display">σ = 0.0</div>
         </div>
         <div class="control-group">
           <label for="tau0Slider">τ₀ (Base Time)</label>
-          <input type="range" id="tau0Slider" class="slider" min="0.1" max="5" step="0.1" value="1.0">
+          <input type="range" id="tau0Slider" class="slider" min="0.1" max="5" step="0.1" value="1.0"
+                 aria-label="Base time scale" aria-describedby="tau0Value">
           <div id="tau0Value" class="value-display">τ₀ = 1.0</div>
         </div>
         <div class="control-group">
-          <div class="tau-readout">τ = τ₀e^σ = <span id="tauReadout">1.0</span></div>
+          <div class="tau-readout">
+            <span class="tooltip" data-tooltip="τ = τ₀ e^σ">τ</span> = 
+            <span class="tooltip" data-tooltip="Base time scale">τ₀</span>
+            <span class="tooltip" data-tooltip="Exponential of σ">e^σ</span> = 
+            <span id="tauReadout" class="tooltip" data-tooltip="Current proper time">1.0</span>
+          </div>
+          <div class="preset-buttons">
+            <button class="preset-btn" onclick="setPreset('earth')">🌍 Earth</button>
+            <button class="preset-btn" onclick="setPreset('gps')">🛰️ GPS</button>
+            <button class="preset-btn" onclick="setPreset('horizon')">⚫ Near-Horizon</button>
+          </div>
         </div>
       </div>
       <div class="control-section">
@@ -312,6 +428,11 @@
     <!-- σ-Additivity Demonstration Panel -->
     <div id="additivity-panel">
       <h3>🔬 σ-Additivity Demo</h3>
+      <div style="font-size: 11px; margin-bottom: 10px;">
+        <a href="docs/LTQG_Research_Paper.pdf" target="_blank" style="color: #4fc3f7; text-decoration: none;">
+          📄 Read the derivation ↗︎
+        </a>
+      </div>
       <div class="demo-section">
         <h4>Gravitational Dilations</h4>
         <div class="control-group">
@@ -332,37 +453,47 @@
           <div class="sigma-sum">σ: log(D_A) + log(D_B) = <span id="sigmaSum">0.0</span></div>
           <div class="equivalence">Δσ = <span id="deltaSigma">0.0</span></div>
         </div>
+        <div class="running-total" id="runningTotal">
+          Running total: log(1.0) + log(1.0) = 0.0
+        </div>
       </div>
     </div>
     
     <!-- Instrument Panel -->
     <div id="instrument-panel">
       <h3>📊 LTQG Instruments</h3>
+      <div style="font-size: 11px; color: #888; margin-bottom: 10px;">
+        <strong>Units:</strong> τ, τ₀ in arbitrary time units; r_s=1 naturalized
+      </div>
       <div class="instrument-grid">
         <div class="instrument">
-          <div class="label">σ (Log-Time)</div>
+          <div class="label tooltip" data-tooltip="Logarithmic time coordinate">σ (Log-Time)</div>
           <div class="value" id="instSigma">0.0</div>
         </div>
         <div class="instrument">
-          <div class="label">τ = τ₀e^σ</div>
+          <div class="label tooltip" data-tooltip="τ = τ₀ e^σ">τ = τ₀e^σ</div>
           <div class="value" id="instTau">1.0</div>
         </div>
         <div class="instrument">
-          <div class="label">e^(-σ)</div>
+          <div class="label tooltip" data-tooltip="= e^{-σ}/τ₀">e^(-σ)</div>
           <div class="value" id="instExpSigma">1.0</div>
         </div>
         <div class="instrument">
-          <div class="label">r_s (Horizon)</div>
+          <div class="label tooltip" data-tooltip="Schwarzschild radius">r_s (Horizon)</div>
           <div class="value" id="instRs">1.0</div>
         </div>
         <div class="instrument">
-          <div class="label">κ (Depth Scale)</div>
+          <div class="label tooltip" data-tooltip="Funnel depth scaling factor">κ (Depth Scale)</div>
           <div class="value" id="instKappa">4.0</div>
         </div>
         <div class="instrument">
-          <div class="label">1/τ</div>
+          <div class="label tooltip" data-tooltip="= e^{-σ}/τ₀">1/τ</div>
           <div class="value" id="instInvTau">1.0</div>
         </div>
+      </div>
+      <div style="margin-top: 10px;">
+        <button class="button" onclick="toggleHighContrast()">🔆 High Contrast</button>
+        <button class="button" onclick="takeScreenshot()">📸 Screenshot</button>
       </div>
     </div>
 
@@ -386,6 +517,51 @@
       geodesicColor: '#7cd2ff', tau0: 1.0, dilationA: 1.0, dilationB: 1.0,
       standardView: false, showInstruments: true
     };
+
+    // Smart number formatting function
+    const fmt = v => (Math.abs(v) >= 1e3 || (Math.abs(v) < 1e-3 && v !== 0))
+      ? v.toExponential(3)
+      : v.toFixed(3);
+
+    // URL state management
+    function updateURLState() {
+      const urlParams = new URLSearchParams({
+        sigma: params.sigma.toFixed(2),
+        speed: params.animationSpeed.toFixed(2),
+        tau0: params.tau0.toFixed(2),
+        kappa: params.kappa.toFixed(1)
+      });
+      history.replaceState(null, '', '?' + urlParams.toString());
+    }
+
+    function loadFromURL() {
+      const urlParams = new URLSearchParams(location.search);
+      if (urlParams.has('sigma')) {
+        params.sigma = parseFloat(urlParams.get('sigma'));
+        currentSigma = params.sigma;
+      }
+      if (urlParams.has('speed')) {
+        params.animationSpeed = parseFloat(urlParams.get('speed'));
+      }
+      if (urlParams.has('tau0')) {
+        params.tau0 = parseFloat(urlParams.get('tau0'));
+      }
+      if (urlParams.has('kappa')) {
+        params.kappa = parseFloat(urlParams.get('kappa'));
+      }
+    }
+
+    // Nonlinear speed curve for fine control
+    function speedFromSlider(sliderValue) {
+      // Map slider [0,1] to speed = 10^(2s-1) for fine control at low speeds
+      const s = parseFloat(sliderValue);
+      return Math.pow(10, 2 * s - 1);
+    }
+
+    function sliderFromSpeed(speed) {
+      // Inverse mapping
+      return (Math.log10(speed) + 1) / 2;
+    }
 
     // Color schemes with gradients for legend
     const colorSchemes = { plasma: { colors:[ new THREE.Color(0x2a1459), new THREE.Color(0x7b2982), new THREE.Color(0xc52e7d), new THREE.Color(0xff7a18), new THREE.Color(0xffe06a) ], gradient:'linear-gradient(to right, #2a1459, #7b2982, #c52e7d, #ff7a18, #ffe06a)', name:'Plasma (Purple→Orange→Yellow)' }, viridis:{ colors:[ new THREE.Color(0x440154), new THREE.Color(0x31688e), new THREE.Color(0x35b779), new THREE.Color(0xfde725)], gradient:'linear-gradient(to right, #440154, #31688e, #35b779, #fde725)', name:'Viridis (Purple→Blue→Green→Yellow)' }, cool:{ colors:[ new THREE.Color(0x00ffff), new THREE.Color(0x0080ff), new THREE.Color(0x8000ff) ], gradient:'linear-gradient(to right, #00ffff, #0080ff, #8000ff)', name:'Cool (Cyan→Blue→Purple)' }, warm:{ colors:[ new THREE.Color(0xff0000), new THREE.Color(0xff8000), new THREE.Color(0xffff00) ], gradient:'linear-gradient(to right, #ff0000, #ff8000, #ffff00)', name:'Warm (Red→Orange→Yellow)' }, grayscale:{ colors:[ new THREE.Color(0x000000), new THREE.Color(0x808080), new THREE.Color(0xffffff) ], gradient:'linear-gradient(to right, #000000, #808080, #ffffff)', name:'Grayscale (Black→Gray→White)' } };
@@ -444,11 +620,47 @@
       if (funnelMesh) scene.remove(funnelMesh);
       const rMin = params.rs*1.01, rMax = params.rMax, radialSegments=100, angularSegments=100;
       const geometry = new THREE.BufferGeometry(); const positions=[], colors=[], indices=[];
-      for (let j=0;j<=angularSegments;j++){ const theta=j/angularSegments*Math.PI*2; for (let i=0;i<=radialSegments;i++){ const t=i/radialSegments; const r=rMin + t*(rMax-rMin); const zEmbed=Math.sqrt(Math.max(r/params.rs - 1, 0)); const z=zEmbed*Math.exp(-params.sigma/params.kappa)*5; const x=r*Math.cos(theta), y=r*Math.sin(theta); positions.push(x,z,y); const c=getColorForSigma(params.sigma, params.colorScheme); colors.push(c.r,c.g,c.b); } }
-      for (let j=0;j<angularSegments;j++){ for (let i=0;i<radialSegments;i++){ const a=i + j*(radialSegments+1); const b=i + (j+1)*(radialSegments+1); const c=(i+1)+(j+1)*(radialSegments+1); const d=(i+1)+ j*(radialSegments+1); indices.push(a,b,d, b,c,d); } }
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions,3)); geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors,3)); geometry.setIndex(indices); geometry.computeVertexNormals();
+      
+      // Add subtle phase drift for σ-phase visualization
+      const phaseTime = Date.now() * 0.0001; // Very slow drift
+      
+      for (let j=0;j<=angularSegments;j++){ 
+        const theta=j/angularSegments*Math.PI*2; 
+        for (let i=0;i<=radialSegments;i++){ 
+          const t=i/radialSegments; 
+          const r=rMin + t*(rMax-rMin); 
+          const zEmbed=Math.sqrt(Math.max(r/params.rs - 1, 0)); 
+          const z=zEmbed*Math.exp(-params.sigma/params.kappa)*5; 
+          const x=r*Math.cos(theta), y=r*Math.sin(theta); 
+          positions.push(x,z,y); 
+          
+          // Add subtle phase modulation for σ-additivity visualization
+          const phaseShift = Math.sin(theta + phaseTime) * 0.1;
+          const effectiveSigma = params.sigma + phaseShift;
+          const c=getColorForSigma(effectiveSigma, params.colorScheme); 
+          colors.push(c.r,c.g,c.b); 
+        } 
+      }
+      
+      for (let j=0;j<angularSegments;j++){ 
+        for (let i=0;i<radialSegments;i++){ 
+          const a=i + j*(radialSegments+1); 
+          const b=i + (j+1)*(radialSegments+1); 
+          const c=(i+1)+(j+1)*(radialSegments+1); 
+          const d=(i+1)+ j*(radialSegments+1); 
+          indices.push(a,b,d, b,c,d); 
+        } 
+      }
+      
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions,3)); 
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors,3)); 
+      geometry.setIndex(indices); 
+      geometry.computeVertexNormals();
       const material = new THREE.MeshPhongMaterial({ vertexColors:true, side:THREE.DoubleSide, wireframe:params.wireframe, transparent:true, opacity:0.9 });
-      funnelMesh = new THREE.Mesh(geometry, material); funnelMesh.receiveShadow = params.showShadows; funnelMesh.castShadow = params.showShadows; scene.add(funnelMesh);
+      funnelMesh = new THREE.Mesh(geometry, material); 
+      funnelMesh.receiveShadow = params.showShadows; 
+      funnelMesh.castShadow = params.showShadows; 
+      scene.add(funnelMesh);
     }
 
     function createHorizon() {
@@ -636,13 +848,92 @@
       });
       
       window.addEventListener('resize', onWindowResize);
+      
+      // Load from URL parameters on startup
+      loadFromURL();
+      
+      // Use nonlinear speed mapping
+      const speedSlider = document.getElementById('speedSlider');
+      speedSlider.value = sliderFromSpeed(params.animationSpeed);
+      speedSlider.addEventListener('input', (e) => {
+        const speed = speedFromSlider(e.target.value);
+        params.animationSpeed = speed;
+        document.getElementById('speedValue').textContent = `Speed: ${fmt(speed)}`;
+        updateURLState();
+      });
+      
+      // Update URL when sigma changes
+      document.getElementById('sigmaSlider').addEventListener('change', updateURLState);
+      document.getElementById('tau0Slider').addEventListener('change', updateURLState);
+    }
+
+    // Preset configurations for different scenarios
+    function setPreset(type) {
+      switch(type) {
+        case 'earth':
+          params.sigma = -2.0;
+          params.tau0 = 1.0;
+          params.kappa = 4.0;
+          params.rs = 1.0;
+          break;
+        case 'gps':
+          params.sigma = -1.0;
+          params.tau0 = 1.5;
+          params.kappa = 6.0;
+          params.rs = 1.5;
+          break;
+        case 'horizon':
+          params.sigma = 3.0;
+          params.tau0 = 0.5;
+          params.kappa = 2.0;
+          params.rs = 2.0;
+          break;
+      }
+      
+      // Update UI controls
+      currentSigma = params.sigma;
+      document.getElementById('sigmaSlider').value = params.sigma;
+      document.getElementById('sigmaValue').textContent = `σ = ${params.sigma.toFixed(1)}`;
+      document.getElementById('tau0Slider').value = params.tau0;
+      document.getElementById('tau0Value').textContent = `τ₀ = ${params.tau0.toFixed(1)}`;
+      document.getElementById('depthSlider').value = params.kappa;
+      document.getElementById('depthValue').textContent = `κ = ${params.kappa.toFixed(1)}`;
+      document.getElementById('horizonSlider').value = params.rs;
+      document.getElementById('horizonValue').textContent = `rs = ${params.rs.toFixed(1)}`;
+      
+      // Update visualization
+      updateVisualization();
+      updateTauReadout();
+      updateInstruments();
+      updateURLState();
+    }
+
+    // High contrast accessibility mode
+    let highContrastMode = false;
+    function toggleHighContrast() {
+      highContrastMode = !highContrastMode;
+      document.body.classList.toggle('high-contrast', highContrastMode);
+    }
+
+    // Screenshot functionality
+    function takeScreenshot() {
+      try {
+        const canvas = renderer.domElement;
+        const link = document.createElement('a');
+        link.download = `ltqg_blackhole_sigma_${params.sigma.toFixed(1)}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      } catch (error) {
+        console.error('Screenshot failed:', error);
+        alert('Screenshot failed. Please try again.');
+      }
     }
 
     function updateActiveViewButton(activeId){ ['viewTopBtn','viewSideBtn','view3DBtn'].forEach(id=>{ const btn=document.getElementById(id); btn.className = id===activeId ? 'button active':'button'; }); }
 
     function updateTauReadout() {
       const tau = params.tau0 * Math.exp(params.sigma);
-      document.getElementById('tauReadout').textContent = tau.toFixed(3);
+      document.getElementById('tauReadout').textContent = fmt(tau);
     }
 
     function updateAdditivityDemo() {
@@ -650,15 +941,25 @@
       const sigmaB = Math.log(params.dilationB);
       const sigmaTotal = sigmaA + sigmaB;
       
-      // Update σ sum display
-      document.getElementById('sigmaSum').textContent = sigmaTotal.toFixed(3);
+      // Update σ sum display with running total highlighting
+      document.getElementById('sigmaSum').textContent = fmt(sigmaTotal);
       
       // Update τ product display
       const directProduct = params.dilationA * params.dilationB;
-      document.getElementById('tauProduct').textContent = directProduct.toFixed(3);
+      document.getElementById('tauProduct').textContent = fmt(directProduct);
       
-      // Update Δσ display
-      document.getElementById('deltaSigma').textContent = sigmaTotal.toFixed(3);
+      // Update Δσ display with color coding for additivity
+      const deltaSigmaElem = document.getElementById('deltaSigma');
+      deltaSigmaElem.textContent = fmt(sigmaTotal);
+      // Color-code to show additivity property
+      deltaSigmaElem.style.color = '#4CAF50'; // Green for correct additivity
+      
+      // Add explicit running total display
+      const runningTotal = `log(${fmt(params.dilationA)}) + log(${fmt(params.dilationB)}) = ${fmt(sigmaTotal)}`;
+      const runningTotalElem = document.getElementById('runningTotal');
+      if (runningTotalElem) {
+        runningTotalElem.textContent = runningTotal;
+      }
     }
 
     function updateInstruments() {
@@ -671,13 +972,13 @@
       const horizon = params.rs; // Schwarzschild radius
       const depth = expSigma / params.kappa;
       
-      // Update readouts
-      document.getElementById('instTau').textContent = tau.toFixed(4);
-      document.getElementById('instSigma').textContent = params.sigma.toFixed(4);
-      document.getElementById('instInvTau').textContent = invTau.toExponential(3);
-      document.getElementById('instExpSigma').textContent = expSigma.toExponential(3);
-      document.getElementById('instRs').textContent = horizon.toFixed(2);
-      document.getElementById('instKappa').textContent = params.kappa.toFixed(2);
+      // Update readouts with smart formatting
+      document.getElementById('instTau').textContent = fmt(tau);
+      document.getElementById('instSigma').textContent = fmt(params.sigma);
+      document.getElementById('instInvTau').textContent = fmt(invTau);
+      document.getElementById('instExpSigma').textContent = fmt(expSigma);
+      document.getElementById('instRs').textContent = fmt(horizon);
+      document.getElementById('instKappa').textContent = fmt(params.kappa);
     }
 
     function updateViewMode() {
@@ -728,7 +1029,46 @@
       updateLegend();
     }
 
-    function updateLegend(){ const colorBar=document.getElementById('legend-color-bar'); const schemeInfo=document.getElementById('legend-scheme-info'); const colorData=colorSchemes[params.colorScheme]; if(colorBar && colorData){ colorBar.style.background=colorData.gradient; } if(schemeInfo && colorData){ schemeInfo.textContent = `Current: ${colorData.name}`; } const root=document.documentElement; if(colorData && colorData.colors){ for(let i=0;i<Math.min(5,colorData.colors.length);i++){ const color=colorData.colors[i]; const hex=`#${color.getHexString()}`; root.style.setProperty(`--color-${i+1}`, hex); } if(colorData.colors.length<5){ const last=`#${colorData.colors[colorData.colors.length-1].getHexString()}`; for(let i=colorData.colors.length;i<5;i++){ root.style.setProperty(`--color-${i+1}`, last); } } } }
+    function updateLegend(){ 
+      const colorBar=document.getElementById('legend-color-bar'); 
+      const schemeInfo=document.getElementById('legend-scheme-info'); 
+      const colorData=colorSchemes[params.colorScheme]; 
+      
+      if(colorBar && colorData){ 
+        colorBar.style.background=colorData.gradient;
+        colorBar.style.height = '20px';
+        colorBar.style.borderRadius = '10px';
+        colorBar.style.border = '1px solid rgba(255,255,255,0.2)';
+        colorBar.style.marginTop = '5px';
+      } 
+      
+      if(schemeInfo && colorData){ 
+        const currentSigmaColor = getColorForSigma(params.sigma, params.colorScheme);
+        const colorHex = `#${currentSigmaColor.getHexString()}`;
+        schemeInfo.innerHTML = `
+          Current: ${colorData.name}<br>
+          <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+            <div style="width: 12px; height: 12px; background: ${colorHex}; border-radius: 50%; margin-right: 8px; border: 1px solid rgba(255,255,255,0.3);"></div>
+            σ = ${fmt(params.sigma)} → Color
+          </div>
+        `; 
+      } 
+      
+      const root=document.documentElement; 
+      if(colorData && colorData.colors){ 
+        for(let i=0;i<Math.min(5,colorData.colors.length);i++){ 
+          const color=colorData.colors[i]; 
+          const hex=`#${color.getHexString()}`; 
+          root.style.setProperty(`--color-${i+1}`, hex); 
+        } 
+        if(colorData.colors.length<5){ 
+          const last=`#${colorData.colors[colorData.colors.length-1].getHexString()}`; 
+          for(let i=colorData.colors.length;i<5;i++){ 
+            root.style.setProperty(`--color-${i+1}`, last); 
+          } 
+        } 
+      } 
+    }
 
     function updateVisualization(){ 
       createFunnel(); 
