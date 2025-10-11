@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — Gravitational Wave σ-Propagation</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 340px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 160px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>🌊 Gravitational Wave σ-Propagation</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    <strong>Physics:</strong> h_{ab}(x,σ) = A e^{-|σ|/κ} cos(k·x - ωτ)<br>
+    σ-damping: κ = 2.0, retarded/advanced modes<br>
+    <em>Gravitational ripples in σ-time spacetime</em>
+  </div>
+  
+  <div class="row">
+    <label>Wave amplitude A</label>
+    <input id="amplitude" type="range" min="0.5" max="3.0" step="0.1" value="1.5">
+  </div>
+  <div class="row">
+    <label>Damping scale κ</label>
+    <input id="kappa" type="range" min="0.5" max="4.0" step="0.1" value="2.0">
+  </div>
+  <div class="row">
+    <label>Frequency ω</label>
+    <input id="frequency" type="range" min="0.5" max="4.0" step="0.1" value="2.0">
+  </div>
+  <div class="row">
+    <label>Wavelength scale k</label>
+    <input id="wavelength" type="range" min="0.2" max="2.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>σ propagation speed</label>
+    <input id="sigmaDt" type="range" min="0.01" max="0.1" step="0.01" value="0.03">
+  </div>
+  
+  <div class="row">
+    <button id="resetWaves" class="btn">🔄 Reset</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+  </div>
+  <div class="row">
+    <button id="pauseWaves" class="btn">⏸️ Pause</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  
+  <div class="small" id="readout"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.01);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 12, 20);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(8, 15, 10);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.3));
+
+  // UI setup
+  const $ = id => document.getElementById(id);
+  const ui = {
+    amplitude: $('amplitude'),
+    kappa: $('kappa'),
+    frequency: $('frequency'),
+    wavelength: $('wavelength'),
+    sigmaDt: $('sigmaDt'),
+    resetWaves: $('resetWaves'),
+    autoOrbit: $('autoOrbit'),
+    pauseWaves: $('pauseWaves'),
+    exportData: $('exportData'),
+    readout: $('readout')
+  };
+
+  // Simulation parameters
+  let currentSigma = -3.0;
+  let currentTau = 0.0;
+  let autoOrbitEnabled = false;
+  let wavesPaused = false;
+  let dataExportArray = [];
+
+  // Wave grid
+  const GRID_SIZE = 32;
+  const GRID_SCALE = 0.8;
+  let waveGrid, waveDataX, waveDataZ;
+
+  // Initialize wave grid
+  function createWaveGrid() {
+    if (waveGrid) {
+      scene.remove(waveGrid);
+      waveGrid.geometry.dispose();
+      waveGrid.material.dispose();
+    }
+
+    const vertices = [];
+    const colors = [];
+    const indices = [];
+    
+    // Generate grid vertices
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      for (let j = 0; j <= GRID_SIZE; j++) {
+        const x = (i - GRID_SIZE/2) * GRID_SCALE;
+        const z = (j - GRID_SIZE/2) * GRID_SCALE;
+        vertices.push(x, 0, z);
+        colors.push(0.3, 0.6, 1.0);
+      }
+    }
+    
+    // Generate indices for triangulated surface
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        const a = i * (GRID_SIZE + 1) + j;
+        const b = a + GRID_SIZE + 1;
+        
+        indices.push(a, b, a + 1);
+        indices.push(b, b + 1, a + 1);
+      }
+    }
+    
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    
+    const material = new THREE.MeshPhongMaterial({
+      vertexColors: true,
+      wireframe: false,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide
+    });
+    
+    waveGrid = new THREE.Mesh(geometry, material);
+    scene.add(waveGrid);
+    
+    // Initialize wave data arrays
+    waveDataX = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1));
+    waveDataZ = new Float32Array((GRID_SIZE + 1) * (GRID_SIZE + 1));
+  }
+
+  // Update wave propagation
+  function updateWaveGrid() {
+    if (!waveGrid) return;
+    
+    const A = parseFloat(ui.amplitude.value);
+    const kappa = parseFloat(ui.kappa.value);
+    const omega = parseFloat(ui.frequency.value);
+    const k = parseFloat(ui.wavelength.value);
+    
+    const positions = waveGrid.geometry.attributes.position.array;
+    const colors = waveGrid.geometry.attributes.color.array;
+    
+    const sigmaDamping = Math.exp(-Math.abs(currentSigma) / kappa);
+    const maxHeight = A * sigmaDamping;
+    
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      for (let j = 0; j <= GRID_SIZE; j++) {
+        const idx = i * (GRID_SIZE + 1) + j;
+        const x = (i - GRID_SIZE/2) * GRID_SCALE;
+        const z = (j - GRID_SIZE/2) * GRID_SCALE;
+        
+        // Plus polarization h_+
+        const phase1 = k * (x + z) - omega * currentTau;
+        const h_plus = maxHeight * Math.cos(phase1);
+        
+        // Cross polarization h_x (90° phase shift)
+        const phase2 = k * (x - z) - omega * currentTau + Math.PI/2;
+        const h_cross = maxHeight * 0.6 * Math.cos(phase2);
+        
+        // Combined wave displacement
+        const displacement = h_plus + h_cross;
+        waveDataX[idx] = displacement * 0.3;
+        waveDataZ[idx] = displacement * 0.7;
+        
+        // Update position
+        positions[idx * 3 + 1] = displacement;
+        
+        // Update colors based on wave amplitude
+        const intensity = Math.abs(displacement) / maxHeight;
+        colors[idx * 3] = 0.1 + intensity * 0.8;     // R
+        colors[idx * 3 + 1] = 0.3 + intensity * 0.6; // G  
+        colors[idx * 3 + 2] = 0.9;                   // B
+      }
+    }
+    
+    waveGrid.geometry.attributes.position.needsUpdate = true;
+    waveGrid.geometry.attributes.color.needsUpdate = true;
+    waveGrid.geometry.computeVertexNormals();
+  }
+
+  // Visualization objects for wave sources
+  let waveSource1, waveSource2;
+  
+  function createWaveSources() {
+    // Remove existing sources
+    if (waveSource1) {
+      scene.remove(waveSource1, waveSource2);
+      waveSource1.geometry.dispose();
+      waveSource1.material.dispose();
+      waveSource2.geometry.dispose();
+      waveSource2.material.dispose();
+    }
+    
+    // Create pulsing spheres as wave sources
+    const sourceGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const sourceMaterial1 = new THREE.MeshPhongMaterial({
+      color: 0xff6b6b,
+      transparent: true,
+      opacity: 0.7
+    });
+    const sourceMaterial2 = new THREE.MeshPhongMaterial({
+      color: 0x4ecdc4,
+      transparent: true,
+      opacity: 0.7
+    });
+    
+    waveSource1 = new THREE.Mesh(sourceGeometry, sourceMaterial1);
+    waveSource2 = new THREE.Mesh(sourceGeometry, sourceMaterial2);
+    
+    waveSource1.position.set(-6, 2, -6);
+    waveSource2.position.set(6, 2, 6);
+    
+    scene.add(waveSource1, waveSource2);
+  }
+
+  function updateWaveSources() {
+    if (!waveSource1 || !waveSource2) return;
+    
+    const omega = parseFloat(ui.frequency.value);
+    const pulseFactor = 1.0 + 0.3 * Math.sin(omega * currentTau);
+    
+    waveSource1.scale.setScalar(pulseFactor);
+    waveSource2.scale.setScalar(pulseFactor * 0.8);
+    
+    // Rotate sources slowly
+    waveSource1.rotation.y += 0.02;
+    waveSource2.rotation.y -= 0.015;
+  }
+
+  // Event handlers
+  ui.resetWaves.onclick = () => {
+    currentSigma = -3.0;
+    currentTau = 0.0;
+    dataExportArray = [];
+    createWaveGrid();
+    createWaveSources();
+  };
+
+  ui.pauseWaves.onclick = () => {
+    wavesPaused = !wavesPaused;
+    ui.pauseWaves.classList.toggle('active', wavesPaused);
+    ui.pauseWaves.textContent = wavesPaused ? '▶️ Resume' : '⏸️ Pause';
+  };
+
+  ui.autoOrbit.onclick = () => {
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  ui.exportData.onclick = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      physics: "Gravitational Wave σ-Propagation - h_{ab}(x,σ) = A e^{-|σ|/κ} cos(k·x - ωτ)",
+      parameters: {
+        amplitude: parseFloat(ui.amplitude.value),
+        kappa: parseFloat(ui.kappa.value),
+        frequency: parseFloat(ui.frequency.value),
+        wavelength: parseFloat(ui.wavelength.value),
+        sigmaDt: parseFloat(ui.sigmaDt.value),
+        gridSize: GRID_SIZE,
+        gridScale: GRID_SCALE
+      },
+      currentState: {
+        sigma: currentSigma,
+        tau: currentTau,
+        sigmaDamping: Math.exp(-Math.abs(currentSigma) / parseFloat(ui.kappa.value))
+      },
+      waveFieldData: {
+        plusPolarization: Array.from(waveDataX),
+        crossPolarization: Array.from(waveDataZ)
+      },
+      evolutionData: dataExportArray.slice(-200)
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_gravity_waves_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Initialize
+  createWaveGrid();
+  createWaveSources();
+
+  // Animation loop
+  function animate() {
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.8;
+    } else {
+      controls.autoRotate = false;
+    }
+
+    if (!wavesPaused) {
+      // Update time parameters
+      const sigmaDt = parseFloat(ui.sigmaDt.value);
+      currentSigma += sigmaDt;
+      currentTau += sigmaDt * 2.0; // τ evolution coupled to σ
+      
+      // Reset if σ gets too large
+      if (currentSigma > 3.0) {
+        currentSigma = -3.0;
+      }
+      
+      updateWaveGrid();
+      updateWaveSources();
+    }
+
+    // Data collection
+    const kappa = parseFloat(ui.kappa.value);
+    const sigmaDamping = Math.exp(-Math.abs(currentSigma) / kappa);
+    const amplitude = parseFloat(ui.amplitude.value);
+    
+    dataExportArray.push({
+      time: performance.now(),
+      sigma: currentSigma,
+      tau: currentTau,
+      sigmaDamping: sigmaDamping,
+      effectiveAmplitude: amplitude * sigmaDamping,
+      frequency: parseFloat(ui.frequency.value)
+    });
+    
+    if (dataExportArray.length > 500) {
+      dataExportArray = dataExportArray.slice(-250);
+    }
+
+    // Update readout
+    const frequency = parseFloat(ui.frequency.value);
+    const wavelength = parseFloat(ui.wavelength.value);
+    const effectiveAmp = parseFloat(ui.amplitude.value) * sigmaDamping;
+    
+    ui.readout.innerHTML = `
+      <div><strong>σ-Time Propagation:</strong></div>
+      <div>σ = ${currentSigma.toFixed(3)}</div>
+      <div>τ = ${currentTau.toFixed(3)}</div>
+      <div><strong>Wave Properties:</strong></div>
+      <div>σ-damping = e^{-|σ|/κ} = ${sigmaDamping.toFixed(4)}</div>
+      <div>h_eff = A × damping = ${effectiveAmp.toFixed(4)}</div>
+      <div>ω = ${frequency.toFixed(2)} &nbsp; k = ${wavelength.toFixed(2)}</div>
+      <div><strong>Polarization:</strong></div>
+      <div>h_+ ~ cos(k·x - ωτ)</div>
+      <div>h_× ~ cos(k·x⊥ - ωτ + π/2)</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        ${wavesPaused ? '⏸️ Propagation paused' : 
+          currentSigma < -1 ? '🌊 Strong waves (σ→-∞)' :
+          currentSigma > 1 ? '📉 Damped waves (σ→+∞)' : '⚡ Active propagation'}
+      </div>
+      <div style="margin-top:4px; font-size:11px; opacity:0.7;">
+        σ-retarded Green's functions with natural damping
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points: ${dataExportArray.length}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>

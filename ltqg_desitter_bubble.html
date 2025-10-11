@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — de Sitter Expansion Bubble</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 320px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 160px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>🌌 de Sitter Expansion</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    <strong>Physics:</strong> a(σ) = exp(H τ₀ e^σ)<br>
+    Exponential cosmic expansion with natural redshift dimming<br>
+    <em>Blue bubble grows, surface dims as 1/a</em>
+  </div>
+  
+  <div class="row">
+    <label>Hubble H</label>
+    <input id="hubbleH" type="range" min="0.05" max="0.5" step="0.01" value="0.15">
+  </div>
+  <div class="row">
+    <label>Time scale τ₀</label>
+    <input id="tau0" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>σ evolution rate</label>
+    <input id="sigmaRate" type="range" min="0.00002" max="0.0002" step="0.00002" value="0.00005">
+  </div>
+  <div class="row">
+    <label>Max bubble scale</label>
+    <input id="maxScale" type="range" min="20" max="100" step="5" value="50">
+  </div>
+  
+  <div class="row">
+    <button id="resetTime" class="btn">🔄 Reset σ-time</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+  </div>
+  <div class="row">
+    <button id="toggleWireframe" class="btn">🌐 Wireframe</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  
+  <div class="small" id="readout"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.01);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 2000);
+  camera.position.set(15, 10, 20);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.maxDistance = 500;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(10, 15, 10);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.4));
+
+  // UI setup
+  const $ = id => document.getElementById(id);
+  const ui = {
+    hubbleH: $('hubbleH'),
+    tau0: $('tau0'),
+    sigmaRate: $('sigmaRate'),
+    maxScale: $('maxScale'),
+    resetTime: $('resetTime'),
+    autoOrbit: $('autoOrbit'),
+    toggleWireframe: $('toggleWireframe'),
+    exportData: $('exportData'),
+    readout: $('readout')
+  };
+
+  // de Sitter parameters
+  let H = parseFloat(ui.hubbleH.value);
+  let tau0dS = parseFloat(ui.tau0.value);
+  let sigmaTime = -6.0; // Start early
+  let autoOrbitEnabled = false;
+  let wireframeMode = false;
+  let dataExportArray = [];
+
+  // Create de Sitter bubble
+  let deSitterBubble;
+  function createBubble() {
+    if (deSitterBubble) {
+      scene.remove(deSitterBubble);
+      deSitterBubble.geometry.dispose();
+      deSitterBubble.material.dispose();
+    }
+
+    const geometry = new THREE.SphereGeometry(1.0, 64, 48);
+    const material = new THREE.MeshStandardMaterial({ 
+      color: 0x90caf9, 
+      transparent: true, 
+      opacity: 0.3, 
+      roughness: 0.8,
+      metalness: 0.1,
+      emissive: 0x0a1a2e,
+      side: THREE.DoubleSide,
+      wireframe: wireframeMode
+    });
+    
+    deSitterBubble = new THREE.Mesh(geometry, material);
+    deSitterBubble.position.set(0, 0, 0);
+    scene.add(deSitterBubble);
+  }
+  createBubble();
+
+  // Reference grid for scale
+  const gridHelper = new THREE.GridHelper(100, 20, 0x334155, 0x223344);
+  gridHelper.material.transparent = true;
+  gridHelper.material.opacity = 0.3;
+  scene.add(gridHelper);
+
+  // Event handlers
+  ui.hubbleH.addEventListener('input', () => {
+    H = parseFloat(ui.hubbleH.value);
+  });
+
+  ui.tau0.addEventListener('input', () => {
+    tau0dS = parseFloat(ui.tau0.value);
+  });
+
+  ui.resetTime.onclick = () => {
+    sigmaTime = -6.0;
+    dataExportArray = [];
+  };
+
+  ui.autoOrbit.onclick = () => {
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  ui.toggleWireframe.onclick = () => {
+    wireframeMode = !wireframeMode;
+    deSitterBubble.material.wireframe = wireframeMode;
+    ui.toggleWireframe.classList.toggle('active', wireframeMode);
+  };
+
+  ui.exportData.onclick = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      physics: "de Sitter Expansion - a(σ) = exp(H τ₀ e^σ)",
+      parameters: {
+        hubbleConstant: H,
+        timeScale: tau0dS,
+        maxScale: parseFloat(ui.maxScale.value),
+        sigmaEvolutionRate: parseFloat(ui.sigmaRate.value)
+      },
+      evolutionData: dataExportArray.slice(-500)
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_desitter_data_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Animation loop
+  function animate() {
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.8;
+    } else {
+      controls.autoRotate = false;
+    }
+
+    // σ-time evolution
+    const sigmaRate = parseFloat(ui.sigmaRate.value);
+    sigmaTime += sigmaRate;
+    
+    // de Sitter scale factor: a(σ) = exp(H τ₀ e^σ)
+    const exponent = H * tau0dS * Math.exp(sigmaTime);
+    const a = Math.exp(exponent);
+    const maxScale = parseFloat(ui.maxScale.value);
+    const Sbubble = Math.min(maxScale, a); // Clamp for display
+    
+    // Update bubble scaling
+    deSitterBubble.scale.set(Sbubble, Sbubble, Sbubble);
+    
+    // Surface brightness ∝ 1/a (observational redshift effect)
+    const brightness = 1.0 / Math.sqrt(a);
+    deSitterBubble.material.opacity = Math.max(0.05, Math.min(0.5, 0.3 * brightness));
+    
+    // Subtle color shift (redshift simulation)
+    const redshift = Math.min(0.3, 0.1 * Math.log(a));
+    deSitterBubble.material.color.setRGB(
+      0.56 + redshift,     // More red as it expands
+      0.79 - redshift*0.5, // Less green
+      0.98 - redshift      // Less blue
+    );
+
+    // Data collection
+    dataExportArray.push({
+      time: performance.now(),
+      sigma: sigmaTime,
+      scaleFactor: a,
+      clampedScale: Sbubble,
+      surfaceBrightness: brightness,
+      redshift: redshift,
+      hubbleH: H,
+      tau0: tau0dS
+    });
+    
+    if (dataExportArray.length > 1000) {
+      dataExportArray = dataExportArray.slice(-500);
+    }
+
+    // Update readout
+    ui.readout.innerHTML = `
+      <div><strong>σ-Time Evolution:</strong></div>
+      <div>σ = ${sigmaTime.toFixed(3)}</div>
+      <div>e^σ = ${Math.exp(sigmaTime).toExponential(2)}</div>
+      <div><strong>Scale Factor:</strong></div>
+      <div>a(σ) = exp(H τ₀ e^σ) = ${a.toExponential(2)}</div>
+      <div>Display scale = ${Sbubble.toFixed(1)}×</div>
+      <div><strong>Observational Effects:</strong></div>
+      <div>Surface brightness ∝ 1/√a = ${brightness.toFixed(4)}</div>
+      <div>Redshift Δz ≈ ${redshift.toFixed(3)}</div>
+      <div><strong>Cosmology:</strong></div>
+      <div>H = ${H} &nbsp; τ₀ = ${tau0dS}</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        ${a > maxScale ? '⚠️ Scale clamped for display' : '✓ Natural expansion'}
+      </div>
+      <div style="margin-top:4px; font-size:11px; opacity:0.7;">
+        Exponential expansion with observational redshift
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points: ${dataExportArray.length}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>

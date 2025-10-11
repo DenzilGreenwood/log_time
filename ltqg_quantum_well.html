@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — Quantum Well σ-Evolution</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 340px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 160px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>🔬 Quantum Well σ-Evolution</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    <strong>Physics:</strong> iℏ ∂σψ = τ₀ e^σ H ψ<br>
+    Freeze-out for σ→-∞, rapid oscillation for σ→+∞<br>
+    <em>Real-time σ-Schrödinger evolution in harmonic well</em>
+  </div>
+  
+  <div class="row">
+    <label>Well frequency ω</label>
+    <input id="omega" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>Wave packet width σ₀</label>
+    <input id="sigmaPacket" type="range" min="0.5" max="2.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>Initial momentum k₀</label>
+    <input id="momentum" type="range" min="0.5" max="4.0" step="0.1" value="2.0">
+  </div>
+  <div class="row">
+    <label>τ₀ time scale</label>
+    <input id="tau0" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>σ evolution step</label>
+    <input id="dtSigma" type="range" min="0.001" max="0.02" step="0.001" value="0.005">
+  </div>
+  
+  <div class="row">
+    <button id="resetWavePacket" class="btn">🔄 Reset ψ</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+  </div>
+  <div class="row">
+    <button id="pauseEvolution" class="btn">⏸️ Pause σ</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  
+  <div class="small" id="readout"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.02);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 8, 15);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(5, 10, 8);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.3));
+
+  // UI setup
+  const $ = id => document.getElementById(id);
+  const ui = {
+    omega: $('omega'),
+    sigmaPacket: $('sigmaPacket'),
+    momentum: $('momentum'),
+    tau0: $('tau0'),
+    dtSigma: $('dtSigma'),
+    resetWavePacket: $('resetWavePacket'),
+    autoOrbit: $('autoOrbit'),
+    pauseEvolution: $('pauseEvolution'),
+    exportData: $('exportData'),
+    readout: $('readout')
+  };
+
+  // Quantum simulation parameters
+  const N = 256;
+  const dx = 0.1;
+  let currentSigma = -2.0;
+  let autoOrbitEnabled = false;
+  let evolutionPaused = false;
+  let dataExportArray = [];
+
+  // Wave function arrays
+  let psiRe = new Float32Array(N);
+  let psiIm = new Float32Array(N);
+  let Varr = new Float32Array(N);
+
+  // Visualization objects
+  let quantumWell, wellPotential;
+
+  // Create potential well visualization
+  function createPotentialWell() {
+    if (wellPotential) {
+      scene.remove(wellPotential);
+      wellPotential.geometry.dispose();
+      wellPotential.material.dispose();
+    }
+
+    const omega = parseFloat(ui.omega.value);
+    const points = [];
+    const x0 = N * dx / 2;
+    
+    for (let i = 0; i < N; i += 4) {
+      const x = i * dx;
+      const V = 0.5 * omega * omega * (x - x0) * (x - x0);
+      const xPos = (i - N/2) * dx * 0.05;
+      points.push(new THREE.Vector3(xPos, V * 0.5, -5));
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ 
+      color: 0x555566, 
+      transparent: true, 
+      opacity: 0.6 
+    });
+    
+    wellPotential = new THREE.Line(geometry, material);
+    scene.add(wellPotential);
+  }
+
+  // Initialize wave packet
+  function initializeWavePacket() {
+    const x0 = N * dx / 2;
+    const sigma_packet = parseFloat(ui.sigmaPacket.value);
+    const k0 = parseFloat(ui.momentum.value);
+    const omega = parseFloat(ui.omega.value);
+
+    // Initialize potential
+    for (let i = 0; i < N; i++) {
+      const x = i * dx;
+      Varr[i] = 0.5 * omega * omega * (x - x0) * (x - x0);
+      
+      // Gaussian wave packet
+      const dx_rel = x - x0;
+      const norm = Math.pow(2*Math.PI*sigma_packet*sigma_packet, -0.25);
+      const envelope = norm * Math.exp(-dx_rel*dx_rel / (4*sigma_packet*sigma_packet));
+      psiRe[i] = envelope * Math.cos(k0 * dx_rel);
+      psiIm[i] = envelope * Math.sin(k0 * dx_rel);
+    }
+
+    createPotentialWell();
+    createQuantumVisualization();
+  }
+
+  // Create wave function visualization
+  function createQuantumVisualization() {
+    if (quantumWell) {
+      scene.remove(quantumWell);
+      quantumWell.geometry.dispose();
+      quantumWell.material.dispose();
+    }
+
+    const positions = new Float32Array(N * 3);
+    const colors = new Float32Array(N * 3);
+    
+    for (let i = 0; i < N; i++) {
+      positions[i*3] = (i - N/2) * dx * 0.05;
+      positions[i*3+1] = 0;
+      positions[i*3+2] = 0;
+      
+      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+      colors[i*3] = Math.min(1.0, prob * 8.0);
+      colors[i*3+1] = Math.min(1.0, prob * 4.0);
+      colors[i*3+2] = 0.9;
+    }
+    
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const material = new THREE.LineBasicMaterial({ 
+      vertexColors: true, 
+      linewidth: 3,
+      transparent: true,
+      opacity: 0.9
+    });
+    
+    quantumWell = new THREE.Line(geometry, material);
+    scene.add(quantumWell);
+  }
+
+  // Inline quantum worker
+  const workerSrc = `
+self.onmessage = (e)=>{
+  const {N, dx, dtSigma, steps, tau0, sigma0, Varr, psiRe, psiIm} = e.data;
+  const hbar=1.0, m=1.0; let sigma = sigma0;
+  const Re = Float64Array.from(psiRe), Im = Float64Array.from(psiIm);
+  const lap = (arr,i,N,dx)=> (arr[(i+1)%N]-2*arr[i]+arr[(i-1+N)%N])/(dx*dx);
+  for (let n=0;n<steps;n++){
+    const tauEff = tau0 * Math.exp(sigma);
+    for (let i=0;i<N;i++){
+      const HRe = -(hbar*hbar/(2*m))*lap(Re,i,N,dx) + Varr[i]*Re[i];
+      const HIm = -(hbar*hbar/(2*m))*lap(Im,i,N,dx) + Varr[i]*Im[i];
+      const dRe = -(tauEff*dtSigma/hbar) * HIm;
+      const dIm =  (tauEff*dtSigma/hbar) * HRe;
+      Re[i]+=dRe; Im[i]+=dIm;
+    }
+    sigma += dtSigma;
+  }
+  postMessage({done:true, sigma, Re: Array.from(Re), Im: Array.from(Im)});
+};`;
+
+  let quantumWorker;
+  let quantumState = {sigma: currentSigma, running: false};
+
+  try {
+    const blobURL = URL.createObjectURL(new Blob([workerSrc], {type:'text/javascript'}));
+    quantumWorker = new Worker(blobURL);
+    
+    quantumWorker.onmessage = (e) => {
+      const {sigma, Re, Im, done} = e.data;
+      currentSigma = sigma;
+      quantumState.sigma = sigma;
+      
+      psiRe = Float32Array.from(Re);
+      psiIm = Float32Array.from(Im);
+      
+      updateQuantumVisualization();
+      
+      if (done) {
+        quantumState.running = false;
+      }
+    };
+  } catch (error) {
+    console.log('Quantum worker failed to initialize');
+  }
+
+  function updateQuantumVisualization() {
+    if (!quantumWell) return;
+    
+    const positions = quantumWell.geometry.attributes.position.array;
+    const colors = quantumWell.geometry.attributes.color.array;
+    
+    for (let i = 0; i < N; i++) {
+      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+      positions[i*3+1] = prob * 3.0;
+      
+      colors[i*3] = Math.min(1.0, prob * 12.0);
+      colors[i*3+1] = Math.min(1.0, prob * 6.0);
+      colors[i*3+2] = 0.8;
+    }
+    
+    quantumWell.geometry.attributes.position.needsUpdate = true;
+    quantumWell.geometry.attributes.color.needsUpdate = true;
+  }
+
+  // Event handlers
+  ui.omega.addEventListener('input', initializeWavePacket);
+  ui.sigmaPacket.addEventListener('input', initializeWavePacket);
+  ui.momentum.addEventListener('input', initializeWavePacket);
+
+  ui.resetWavePacket.onclick = () => {
+    currentSigma = -2.0;
+    quantumState.sigma = currentSigma;
+    initializeWavePacket();
+    dataExportArray = [];
+  };
+
+  ui.pauseEvolution.onclick = () => {
+    evolutionPaused = !evolutionPaused;
+    ui.pauseEvolution.classList.toggle('active', evolutionPaused);
+    ui.pauseEvolution.textContent = evolutionPaused ? '▶️ Resume σ' : '⏸️ Pause σ';
+  };
+
+  ui.autoOrbit.onclick = () => {
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  ui.exportData.onclick = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      physics: "Quantum Well σ-Evolution - iℏ ∂σψ = τ₀ e^σ H ψ",
+      parameters: {
+        omega: parseFloat(ui.omega.value),
+        sigmaPacket: parseFloat(ui.sigmaPacket.value),
+        momentum: parseFloat(ui.momentum.value),
+        tau0: parseFloat(ui.tau0.value),
+        dtSigma: parseFloat(ui.dtSigma.value),
+        gridPoints: N,
+        spatialStep: dx
+      },
+      currentState: {
+        sigma: currentSigma,
+        waveFunction: {
+          real: Array.from(psiRe),
+          imaginary: Array.from(psiIm)
+        }
+      },
+      evolutionData: dataExportArray.slice(-200)
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_quantum_data_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Initialize
+  initializeWavePacket();
+
+  // Animation loop
+  function animate() {
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 1.0;
+    } else {
+      controls.autoRotate = false;
+    }
+
+    // Quantum evolution
+    if (quantumWorker && !quantumState.running && !evolutionPaused && currentSigma < 4.0) {
+      quantumState.running = true;
+      quantumWorker.postMessage({
+        N, dx, 
+        dtSigma: parseFloat(ui.dtSigma.value), 
+        steps: 20,
+        tau0: parseFloat(ui.tau0.value), 
+        sigma0: currentSigma,
+        Varr: Array.from(Varr), 
+        psiRe: Array.from(psiRe), 
+        psiIm: Array.from(psiIm)
+      });
+    }
+
+    // Calculate wave function properties
+    let norm = 0, avgX = 0, avgP = 0;
+    const x0 = N * dx / 2;
+    
+    for (let i = 0; i < N; i++) {
+      const prob = psiRe[i]*psiRe[i] + psiIm[i]*psiIm[i];
+      norm += prob;
+      avgX += prob * (i * dx - x0);
+    }
+    norm = Math.sqrt(norm * dx);
+    avgX /= (norm * norm);
+
+    // Data collection
+    dataExportArray.push({
+      time: performance.now(),
+      sigma: currentSigma,
+      norm: norm,
+      avgPosition: avgX,
+      tau0: parseFloat(ui.tau0.value),
+      omega: parseFloat(ui.omega.value)
+    });
+    
+    if (dataExportArray.length > 500) {
+      dataExportArray = dataExportArray.slice(-250);
+    }
+
+    // Update readout
+    ui.readout.innerHTML = `
+      <div><strong>σ-Time Evolution:</strong></div>
+      <div>σ = ${currentSigma.toFixed(3)}</div>
+      <div>τ_eff = τ₀ e^σ = ${(parseFloat(ui.tau0.value) * Math.exp(currentSigma)).toExponential(2)}</div>
+      <div><strong>Wave Function:</strong></div>
+      <div>Norm = ${norm.toFixed(4)}</div>
+      <div>⟨x⟩ = ${avgX.toFixed(3)}</div>
+      <div><strong>System:</strong></div>
+      <div>ω = ${ui.omega.value} &nbsp; k₀ = ${ui.momentum.value}</div>
+      <div>σ₀ = ${ui.sigmaPacket.value} &nbsp; Δσ = ${ui.dtSigma.value}</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        ${evolutionPaused ? '⏸️ Evolution paused' : 
+          currentSigma < -1 ? '❄️ Frozen regime (σ→-∞)' :
+          currentSigma > 2 ? '🌊 Rapid oscillation (σ→+∞)' : '⚡ Active evolution'}
+      </div>
+      <div style="margin-top:4px; font-size:11px; opacity:0.7;">
+        σ-Schrödinger: Natural freeze-out & acceleration
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points: ${dataExportArray.length}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>

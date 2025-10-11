@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — Big Bang Reverse Funnel</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 320px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 160px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>⚛️ Big Bang Reverse Funnel</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    <strong>Physics:</strong> a(σ) = e^{nσ} scale factor evolution<br>
+    Shows smooth expansion from finite throat—no Big Bang singularity!<br>
+    <em>Blue funnel expands with comoving galaxy points</em>
+  </div>
+  
+  <div class="row">
+    <label>Epoch n</label>
+    <input id="epochN" type="range" min="0.3" max="1.0" step="0.05" value="0.5">
+    <span id="epochLabel">radiation (n=1/2)</span>
+  </div>
+  <div class="row">
+    <label>σ evolution rate</label>
+    <input id="sigmaRate" type="range" min="0.00001" max="0.0002" step="0.00001" value="0.00005">
+  </div>
+  <div class="row">
+    <label>Throat radius r₀</label>
+    <input id="throatRadius" type="range" min="0.1" max="0.5" step="0.01" value="0.25">
+  </div>
+  <div class="row">
+    <label>Galaxy count</label>
+    <input id="galaxyCount" type="range" min="200" max="1000" step="50" value="600">
+  </div>
+  
+  <div class="row">
+    <button id="resetTime" class="btn">🔄 Reset σ-time</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+  </div>
+  <div class="row">
+    <button id="toggleGalaxies" class="btn active">✨ Show Galaxies</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  
+  <div class="small" id="readout"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.01);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(8, 5, 12);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(5, 10, 8);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.3));
+
+  // UI setup
+  const $ = id => document.getElementById(id);
+  const ui = {
+    epochN: $('epochN'),
+    sigmaRate: $('sigmaRate'),
+    throatRadius: $('throatRadius'),
+    galaxyCount: $('galaxyCount'),
+    epochLabel: $('epochLabel'),
+    resetTime: $('resetTime'),
+    autoOrbit: $('autoOrbit'),
+    toggleGalaxies: $('toggleGalaxies'),
+    exportData: $('exportData'),
+    readout: $('readout')
+  };
+
+  // Big Bang parameters
+  let nBB = parseFloat(ui.epochN.value);
+  let kBB = 4.0;
+  let r0BB = parseFloat(ui.throatRadius.value);
+  let hBB = 6.0;
+  let sigmaTime = -8.0; // Start early in σ-time
+  let autoOrbitEnabled = false;
+  let galaxiesVisible = true;
+  let dataExportArray = [];
+
+  // Create Big Bang funnel
+  let bigBangMesh;
+  function createBigBangFunnel() {
+    if (bigBangMesh) {
+      scene.remove(bigBangMesh);
+      bigBangMesh.geometry.dispose();
+      bigBangMesh.material.dispose();
+    }
+    
+    const geom = new THREE.CylinderGeometry(r0BB, r0BB, hBB, 96, 160, true);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x8ab4ff, 
+      emissive: 0x081e3a, 
+      roughness: 0.85, 
+      metalness: 0.05,
+      side: THREE.DoubleSide, 
+      transparent: true, 
+      opacity: 0.42, 
+      wireframe: true
+    });
+    bigBangMesh = new THREE.Mesh(geom, mat);
+    bigBangMesh.position.set(0, 0, 0);
+    scene.add(bigBangMesh);
+  }
+  createBigBangFunnel();
+
+  // Create comoving galaxies
+  let galaxyPoints;
+  function createGalaxies() {
+    if (galaxyPoints) {
+      scene.remove(galaxyPoints);
+      galaxyPoints.geometry.dispose();
+      galaxyPoints.material.dispose();
+    }
+    
+    const count = parseInt(ui.galaxyCount.value);
+    const arr = new Float32Array(count * 3);
+    
+    for (let i = 0; i < count; i++) {
+      // Random distribution in initial disk
+      const r = r0BB * (0.3 + Math.random() * 0.7);
+      const theta = Math.random() * Math.PI * 2;
+      const phi = (Math.random() - 0.5) * 0.2; // Thin disk
+      
+      arr[3*i]   = r * Math.cos(theta);
+      arr[3*i+1] = r * Math.sin(phi);
+      arr[3*i+2] = r * Math.sin(theta);
+    }
+    
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    
+    const mat = new THREE.PointsMaterial({ 
+      size: 0.04, 
+      color: 0xffe082,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    galaxyPoints = new THREE.Points(geom, mat);
+    galaxyPoints.position.copy(bigBangMesh.position);
+    scene.add(galaxyPoints);
+  }
+  createGalaxies();
+
+  // Event handlers
+  ui.epochN.addEventListener('input', () => {
+    nBB = parseFloat(ui.epochN.value);
+    const epochNames = {
+      0.3: 'slow (n=0.3)',
+      0.5: 'radiation (n=1/2)', 
+      0.67: 'matter (n=2/3)',
+      1.0: 'fast (n=1.0)'
+    };
+    ui.epochLabel.textContent = epochNames[nBB.toFixed(2)] || `custom (n=${nBB.toFixed(2)})`;
+  });
+
+  ui.throatRadius.addEventListener('input', () => {
+    r0BB = parseFloat(ui.throatRadius.value);
+    createBigBangFunnel();
+    createGalaxies();
+  });
+
+  ui.galaxyCount.addEventListener('input', () => {
+    createGalaxies();
+  });
+
+  ui.resetTime.onclick = () => {
+    sigmaTime = -8.0;
+    dataExportArray = [];
+  };
+
+  ui.autoOrbit.onclick = () => {
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  ui.toggleGalaxies.onclick = () => {
+    galaxiesVisible = !galaxiesVisible;
+    galaxyPoints.visible = galaxiesVisible;
+    ui.toggleGalaxies.classList.toggle('active', galaxiesVisible);
+  };
+
+  ui.exportData.onclick = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      physics: "Big Bang Reverse Funnel - a(σ) = exp(n*σ)",
+      parameters: {
+        epochN: nBB,
+        throatRadius: r0BB,
+        galaxyCount: parseInt(ui.galaxyCount.value),
+        sigmaEvolutionRate: parseFloat(ui.sigmaRate.value)
+      },
+      evolutionData: dataExportArray.slice(-500)
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_bigbang_data_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Animation loop
+  function animate() {
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 1.0;
+    } else {
+      controls.autoRotate = false;
+    }
+
+    // σ-time evolution
+    const sigmaRate = parseFloat(ui.sigmaRate.value);
+    sigmaTime += sigmaRate;
+    
+    // Scale factor a(σ) = e^{nσ}
+    const aBB = Math.exp(nBB * sigmaTime);
+    const Rsigma = (r0BB + 0.08) * aBB;
+    const S = Rsigma / r0BB;
+    
+    // Update funnel scaling
+    bigBangMesh.scale.set(S, 1.0 + (Math.log(aBB) / kBB), S);
+    
+    // Update comoving galaxies
+    if (galaxyPoints && galaxiesVisible) {
+      galaxyPoints.scale.set(aBB, 1.0, aBB);
+      // Dim galaxies slightly as universe expands
+      galaxyPoints.material.opacity = Math.max(0.3, 0.8 / Math.sqrt(aBB));
+    }
+
+    // Data collection
+    dataExportArray.push({
+      time: performance.now(),
+      sigma: sigmaTime,
+      scaleFactor: aBB,
+      radiusScale: S,
+      throatRadius: r0BB,
+      epoch: nBB
+    });
+    
+    if (dataExportArray.length > 1000) {
+      dataExportArray = dataExportArray.slice(-500);
+    }
+
+    // Update readout
+    ui.readout.innerHTML = `
+      <div><strong>σ-Time Evolution:</strong></div>
+      <div>σ = ${sigmaTime.toFixed(3)}</div>
+      <div>a(σ) = e^{${nBB}σ} = ${aBB.toExponential(2)}</div>
+      <div><strong>Physical Scale:</strong></div>
+      <div>Radius scale = ${S.toFixed(2)}×</div>
+      <div>Height scale = ${(1.0 + Math.log(aBB)/kBB).toFixed(2)}×</div>
+      <div><strong>Cosmology:</strong></div>
+      <div>Epoch: ${ui.epochLabel.textContent}</div>
+      <div>Galaxy count: ${ui.galaxyCount.value}</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        No Big Bang singularity—smooth expansion from finite throat
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points: ${dataExportArray.length}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LTQG — Einstein-Rosen Wormhole Bridge</title>
+<style>
+  html, body { margin:0; height:100%; background:#0f1419; color:#e8eaed; font-family:system-ui,sans-serif; }
+  #ui {
+    position: fixed; top: 12px; right: 12px; width: 320px; background: #151c28cc; padding: 14px 16px;
+    border-radius: 12px; backdrop-filter: blur(8px); box-shadow: 0 10px 30px #0008;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #ui h2 { margin: 6px 0 10px; font-size: 18px; }
+  .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+  label { font-size: 13px; opacity: 0.9; }
+  input[type="range"] { width: 160px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  #canvas { width:100%; height:100%; display:block; }
+  .btn { padding:6px 10px; border-radius:8px; background:#1f2a3b; border:1px solid #2c3b51; color:#cfe1ff; cursor:pointer; transition: all 0.2s ease; }
+  .btn.active { background:#2c3b51; border-color: #4fc3f7; }
+  .btn:hover { background:#253442; border-color: #3a4b63; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h2>🌠 Einstein-Rosen Bridge</h2>
+  <div class="small" style="margin-bottom: 10px; line-height: 1.4; opacity: 0.8;">
+    <strong>Physics:</strong> z(r,σ) = √(r²/r₀² - 1) e^{-|σ|/κ}<br>
+    Stable wormhole throat—no pinch singularities!<br>
+    <em>Purple bridge contracts smoothly as |σ| increases</em>
+  </div>
+  
+  <div class="row">
+    <label>Throat radius r₀</label>
+    <input id="throatRadius" type="range" min="0.5" max="2.0" step="0.1" value="1.0">
+  </div>
+  <div class="row">
+    <label>σ-damping κ</label>
+    <input id="dampingK" type="range" min="2.0" max="8.0" step="0.2" value="4.0">
+  </div>
+  <div class="row">
+    <label>σ evolution rate</label>
+    <input id="sigmaRate" type="range" min="0.00002" max="0.0002" step="0.00002" value="0.00006">
+  </div>
+  <div class="row">
+    <label>Bridge separation</label>
+    <input id="separation" type="range" min="1.0" max="4.0" step="0.1" value="1.5">
+  </div>
+  
+  <div class="row">
+    <button id="resetTime" class="btn">🔄 Reset σ-time</button>
+    <button id="autoOrbit" class="btn">🌀 Auto-orbit</button>
+  </div>
+  <div class="row">
+    <button id="reverseTime" class="btn">⏪ Reverse σ</button>
+    <button id="exportData" class="btn">📊 Export Data</button>
+  </div>
+  
+  <div class="small" id="readout"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const canvas = document.getElementById('canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0x0f1419, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0f1419, 0.015);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(8, 4, 10);
+  camera.lookAt(0,0,0);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(5, 10, 8);
+  scene.add(dirLight, new THREE.AmbientLight(0xffffff, 0.3));
+
+  // UI setup
+  const $ = id => document.getElementById(id);
+  const ui = {
+    throatRadius: $('throatRadius'),
+    dampingK: $('dampingK'), 
+    sigmaRate: $('sigmaRate'),
+    separation: $('separation'),
+    resetTime: $('resetTime'),
+    autoOrbit: $('autoOrbit'),
+    reverseTime: $('reverseTime'),
+    exportData: $('exportData'),
+    readout: $('readout')
+  };
+
+  // Wormhole parameters
+  let r0WH = parseFloat(ui.throatRadius.value);
+  let kWH = parseFloat(ui.dampingK.value);
+  let sigmaTime = -4.0;
+  let autoOrbitEnabled = false;
+  let reverseTimeEnabled = false;
+  let dataExportArray = [];
+
+  // Create wormhole funnels
+  let whUpper, whLower;
+  function createWormhole() {
+    // Clean up existing meshes
+    if (whUpper) {
+      scene.remove(whUpper, whLower);
+      whUpper.geometry.dispose();
+      whUpper.material.dispose();
+      whLower.geometry.dispose();
+      whLower.material.dispose();
+    }
+
+    const separation = parseFloat(ui.separation.value);
+    const segR = 96, segH = 160, H = 5.0;
+    
+    const geometry = new THREE.CylinderGeometry(r0WH, 2.5, H, segR, segH, true);
+    const material = new THREE.MeshStandardMaterial({ 
+      color: 0xb39ddb, 
+      wireframe: true, 
+      transparent: true, 
+      opacity: 0.6, 
+      side: THREE.DoubleSide, 
+      emissive: 0x1a0d26,
+      roughness: 0.7,
+      metalness: 0.1
+    });
+    
+    whUpper = new THREE.Mesh(geometry, material);
+    whLower = new THREE.Mesh(geometry.clone(), material.clone());
+    
+    whUpper.position.set(0, separation, 0);
+    whLower.position.set(0, -separation, 0);
+    whLower.rotation.x = Math.PI; // Flip lower funnel
+    
+    scene.add(whUpper, whLower);
+  }
+  createWormhole();
+
+  // Create connection visualization
+  let bridgeConnection;
+  function createBridgeConnection() {
+    if (bridgeConnection) {
+      scene.remove(bridgeConnection);
+      bridgeConnection.geometry.dispose();
+      bridgeConnection.material.dispose();
+    }
+
+    const geometry = new THREE.CylinderGeometry(r0WH * 0.8, r0WH * 0.8, 0.2, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x9c88ff,
+      transparent: true,
+      opacity: 0.4,
+      emissive: 0x2a1a3d
+    });
+    
+    bridgeConnection = new THREE.Mesh(geometry, material);
+    bridgeConnection.position.set(0, 0, 0);
+    scene.add(bridgeConnection);
+  }
+  createBridgeConnection();
+
+  // Event handlers
+  ui.throatRadius.addEventListener('input', () => {
+    r0WH = parseFloat(ui.throatRadius.value);
+    createWormhole();
+    createBridgeConnection();
+  });
+
+  ui.dampingK.addEventListener('input', () => {
+    kWH = parseFloat(ui.dampingK.value);
+  });
+
+  ui.separation.addEventListener('input', () => {
+    createWormhole();
+  });
+
+  ui.resetTime.onclick = () => {
+    sigmaTime = -4.0;
+    reverseTimeEnabled = false;
+    ui.reverseTime.classList.remove('active');
+    dataExportArray = [];
+  };
+
+  ui.reverseTime.onclick = () => {
+    reverseTimeEnabled = !reverseTimeEnabled;
+    ui.reverseTime.classList.toggle('active', reverseTimeEnabled);
+  };
+
+  ui.autoOrbit.onclick = () => {
+    autoOrbitEnabled = !autoOrbitEnabled;
+    ui.autoOrbit.classList.toggle('active', autoOrbitEnabled);
+  };
+
+  ui.exportData.onclick = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      physics: "Einstein-Rosen Bridge - z(r,σ) = √(r²/r₀² - 1) exp(-|σ|/κ)",
+      parameters: {
+        throatRadius: r0WH,
+        dampingK: kWH,
+        separation: parseFloat(ui.separation.value),
+        sigmaEvolutionRate: parseFloat(ui.sigmaRate.value)
+      },
+      evolutionData: dataExportArray.slice(-500)
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ltqg_wormhole_data_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Animation loop
+  function animate() {
+    if (autoOrbitEnabled) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 1.2;
+    } else {
+      controls.autoRotate = false;
+    }
+
+    // σ-time evolution
+    const sigmaRate = parseFloat(ui.sigmaRate.value);
+    sigmaTime += reverseTimeEnabled ? -sigmaRate : sigmaRate;
+    
+    // Wormhole throat contraction: exp(-|σ|/κ)
+    const shrinkFactor = Math.exp(-Math.abs(sigmaTime) / kWH);
+    
+    // Update wormhole scaling
+    whUpper.scale.set(shrinkFactor, 1.0, shrinkFactor);
+    whLower.scale.set(shrinkFactor, 1.0, shrinkFactor);
+    
+    // Update bridge connection
+    bridgeConnection.scale.set(shrinkFactor, 1.0, shrinkFactor);
+    bridgeConnection.material.opacity = Math.max(0.1, 0.4 * shrinkFactor);
+
+    // Subtle material opacity changes
+    const baseOpacity = 0.6;
+    whUpper.material.opacity = Math.max(0.2, baseOpacity * shrinkFactor);
+    whLower.material.opacity = Math.max(0.2, baseOpacity * shrinkFactor);
+
+    // Data collection
+    dataExportArray.push({
+      time: performance.now(),
+      sigma: sigmaTime,
+      absSigma: Math.abs(sigmaTime),
+      shrinkFactor: shrinkFactor,
+      throatRadius: r0WH,
+      dampingK: kWH
+    });
+    
+    if (dataExportArray.length > 1000) {
+      dataExportArray = dataExportArray.slice(-500);
+    }
+
+    // Update readout
+    ui.readout.innerHTML = `
+      <div><strong>σ-Time Evolution:</strong></div>
+      <div>σ = ${sigmaTime.toFixed(3)}</div>
+      <div>|σ| = ${Math.abs(sigmaTime).toFixed(3)}</div>
+      <div><strong>Throat Geometry:</strong></div>
+      <div>Shrink factor = e^{-|σ|/κ} = ${shrinkFactor.toFixed(4)}</div>
+      <div>Effective radius = ${(r0WH * shrinkFactor).toFixed(3)}</div>
+      <div><strong>Bridge Status:</strong></div>
+      <div>Connection: ${shrinkFactor > 0.1 ? 'STABLE' : 'Contracting'}</div>
+      <div>Damping κ = ${kWH}</div>
+      <div style="margin-top:8px; font-size:11px; opacity:0.7;">
+        ${reverseTimeEnabled ? '⏪ Time reversal active' : '⏩ Forward σ-evolution'}
+      </div>
+      <div style="margin-top:4px; font-size:11px; opacity:0.7;">
+        No pinch singularities—bridge stays regular
+      </div>
+      <div style="font-size:11px; color:#4fc3f7;">
+        Data points: ${dataExportArray.length}
+      </div>
+    `;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  renderer.setAnimationLoop(animate);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
