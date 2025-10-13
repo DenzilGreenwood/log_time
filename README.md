@@ -3,11 +3,37 @@
 [![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://denzilgreenwood.github.io/log_time/)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-research-orange.svg)](https://github.com/DenzilGreenwood/log_time)
+[![Status](https://img.shields.io/badge/status-theoretical%20research-orange.svg)](https://github.com/DenzilGreenwood/log_time)
+[![Peer Review](https://img.shields.io/badge/peer%20review-welcome-green.svg)](#-academic-review-and-collaboration)
+[![Disclaimer](https://img.shields.io/badge/⚠️-read%20disclaimer-red.svg)](DISCLAIMER.md)
 
-> **Bridging the temporal divide between General Relativity and Quantum Mechanics through logarithmic time coordinates**
+> **⚠️ THEORETICAL FRAMEWORK - SEEKING PEER REVIEW AND VALIDATION ⚠️**
 
-A comprehensive Python implementation of the Log-Time Quantum Gravity framework, which reconciles General Relativity's multiplicative time-dilation structure with Quantum Mechanics' additive phase evolution through the elegant transformation: **σ = log(τ/τ₀)**
+> **📋 [READ FULL DISCLAIMER](DISCLAIMER.md) - This is speculative theoretical work requiring validation**
+
+> **A proposed theoretical approach to bridging the temporal divide between General Relativity and Quantum Mechanics through logarithmic time coordinates**
+
+**LTQG is a speculative theoretical framework** that proposes to reconcile General Relativity's multiplicative time-dilation structure with Quantum Mechanics' additive phase evolution through the transformation: **σ = log(τ/τ₀)**
+
+## 🔬 **IMPORTANT: Academic Status and Disclaimer**
+
+### 📋 **Theoretical Status**
+- **🧪 Speculative Theory**: LTQG is a proposed theoretical framework that has not yet undergone formal peer review
+- **🔍 Seeking Validation**: This work represents initial theoretical explorations requiring rigorous academic scrutiny
+- **📊 Computational Implementation**: The code provides mathematical modeling of the proposed concepts
+- **⚗️ Experimental Predictions**: Contains testable hypotheses awaiting empirical validation
+
+### 🤝 **Academic Review Welcome**
+We **actively encourage** critical review, comments, and collaboration from the physics community:
+- **Theoretical Physicists**: Mathematical consistency and formal rigor
+- **Experimentalists**: Feasibility and design of proposed tests  
+- **Computational Scientists**: Numerical methods and implementation validation
+- **Graduate Students**: Learning opportunities and thesis projects
+
+### 📧 **Contact for Academic Collaboration**
+- **Submit Issues**: [GitHub Issues](https://github.com/DenzilGreenwood/log_time/issues) for detailed technical discussions
+- **Pull Requests**: Contributions to theoretical development or computational improvements
+- **Email Discussion**: For private academic correspondence and collaboration proposals
 
 ## 🚀 Quick Links
 
@@ -42,20 +68,30 @@ Our breakthrough **research-grade educational visualization** makes LTQG concept
 
 ## 🎯 What is LTQG?
 
-Log-Time Quantum Gravity addresses the fundamental incompatibility between:
+**LTQG is a proposed theoretical framework** that addresses the fundamental incompatibility between:
 
 - **General Relativity**: Multiplicative time dilation `τ' = γ(v, Φ) τ`
 - **Quantum Mechanics**: Additive phase evolution `φ = Et/ℏ`
 
-### 💡 The Key Insight
+### 💡 The Theoretical Proposal
 
-The logarithmic transformation **σ = log(τ/τ₀)** converts multiplication to addition:
+The logarithmic transformation **σ = log(τ/τ₀)** is proposed to convert multiplication to addition:
 
 ```
 τ_B = α τ_A  ⟹  σ_B = σ_A + log(α)
 ```
 
-This enables natural unification while providing automatic **singularity regularization** through "asymptotic silence" - the vanishing of quantum evolution generators as σ → -∞.
+**This is a speculative approach** that aims to enable natural unification while providing automatic **singularity regularization** through "asymptotic silence" - the proposed vanishing of quantum evolution generators as σ → -∞.
+
+### ⚠️ **Theoretical Limitations and Open Questions**
+
+This framework is **preliminary and requires validation**:
+
+1. **Mathematical Rigor**: Formal consistency with established physics requires verification
+2. **Physical Interpretation**: The meaning of σ-time in spacetime geometry needs clarification
+3. **Experimental Viability**: Proposed tests require feasibility analysis by experimentalists
+4. **Comparison with Established Theories**: Relationship to proven quantum gravity approaches unclear
+5. **Computational Validation**: Numerical results need independent verification
 
 ## ✨ Key Features
 
@@ -342,26 +378,75 @@ Visit: **[https://denzilgreenwood.github.io/log_time/](https://denzilgreenwood.g
 
 ## 🤝 Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+**We actively welcome critical review and contributions from the physics community!**
 
-- 🐛 Reporting bugs and requesting features
-- 🔬 Adding experimental protocols  
-- 📚 Improving documentation
-- 🧮 Extending mathematical frameworks
-- 🎨 Enhancing visualizations
+### 🔬 **Types of Academic Collaboration Welcome:**
+- **🧮 Mathematical Review**: Verification of theoretical consistency and formal rigor
+- **🧪 Experimental Assessment**: Feasibility analysis of proposed tests by experimentalists
+- **💻 Computational Validation**: Independent verification of numerical implementations
+- **📚 Educational Improvement**: Enhancing explanations and pedagogical materials
+- **🔍 Critical Analysis**: Identifying theoretical flaws or conceptual issues
+
+### 📋 **How to Contribute:**
+- **🐛 Issues**: Report theoretical problems, computational bugs, or conceptual concerns
+- **🔬 Discussions**: Engage in academic discussions via GitHub Issues
+- **🧮 Pull Requests**: Contribute mathematical improvements or code enhancements
+- **📧 Private Correspondence**: Contact for sensitive academic discussions
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
+- Reporting theoretical concerns and mathematical inconsistencies
+- Requesting features and experimental protocol additions
+- Improving documentation and educational materials
+- Extending mathematical frameworks and computational methods
+- Enhancing visualizations and interactive demonstrations
+
+### 🏛️ **Academic Standards:**
+All contributions are evaluated based on:
+- **Scientific Rigor**: Mathematical consistency and physical soundness
+- **Reproducibility**: Clear documentation and verifiable results
+- **Peer Review**: Community discussion and expert validation
+- **Educational Value**: Contribution to physics education and understanding
+
+## 🏛️ **Academic Review and Collaboration**
+
+### 📧 **Contact Information for Academic Discussion**
+- **GitHub Issues**: [Technical discussions and theoretical questions](https://github.com/DenzilGreenwood/log_time/issues)
+- **Pull Requests**: Code contributions and mathematical improvements
+- **Academic Collaboration**: Direct correspondence for research collaboration
+
+### 🔍 **Peer Review Status**
+- **Current Status**: Preliminary theoretical framework seeking peer review
+- **Target Journals**: Considering submissions to theoretical physics journals
+- **Conference Presentations**: Planning presentations at quantum gravity conferences
+- **Workshop Proposals**: Organizing academic workshops for community feedback
+
+### 🤝 **Collaboration Opportunities**
+- **Graduate Student Projects**: Thesis opportunities in theoretical and computational physics
+- **Postdoc Positions**: Potential research positions for framework development
+- **International Collaboration**: Partnerships with quantum gravity research groups
+- **Experimental Validation**: Collaboration with experimental physics groups
+
+### 📊 **Research Transparency**
+- **Open Source**: All code and calculations publicly available
+- **Reproducible Research**: Complete computational pipeline documented
+- **Data Availability**: All figures and results can be regenerated from source
+- **Version Control**: Full development history maintained in Git
 
 ## 📄 Citation
 
-If you use this work in research, please cite:
+If you use this theoretical framework in research, please cite:
 
 ```bibtex
 @misc{ltqg2025,
-  title={Log-Time Quantum Gravity: A Reparameterization Approach to Temporal Unification},
+  title={Log-Time Quantum Gravity: A Speculative Reparameterization Approach to Temporal Unification},
   author={Denzil James Greenwood},
   year={2025},
-  note={Available at: https://github.com/DenzilGreenwood/log_time}
+  note={Theoretical framework under development. Available at: https://github.com/DenzilGreenwood/log_time},
+  status={Preliminary - Seeking Peer Review}
 }
 ```
+
+**Note**: This is a preliminary theoretical framework. Please include appropriate disclaimers about the speculative nature when referencing this work.
 
 ## 📜 License
 

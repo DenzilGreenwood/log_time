@@ -1,30 +1,41 @@
-# Contributing to LTQG
+# Contributing to LTQG - Theoretical Framework
 
-We welcome contributions to the Log-Time Quantum Gravity project! This document provides guidelines for contributing.
+**Welcome to Log-Time Quantum Gravity (LTQG) - a speculative theoretical framework seeking peer review and validation!**
 
-## 🚀 How to Contribute
+## ⚠️ **Important Note: Theoretical Nature**
 
-### Reporting Bugs
-- Use the GitHub issue tracker
-- Include a clear description of the problem
-- Provide minimal code example that reproduces the issue
-- Include Python version and dependency versions
+LTQG is a **preliminary theoretical framework** that has not undergone formal peer review. All contributions should acknowledge this speculative nature and focus on:
 
-### Suggesting Enhancements
-- Open an issue with enhancement label
-- Clearly describe the proposed feature
-- Explain why this enhancement would be useful
-- Provide example usage if applicable
+- **Critical analysis** of theoretical consistency
+- **Mathematical verification** of computational implementations  
+- **Educational improvements** for learning purposes
+- **Constructive feedback** on theoretical soundness
 
-### Pull Requests
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
+## 🔬 **Types of Academic Contributions Welcome**
+
+### 🧮 **Theoretical Review**
+- **Mathematical rigor**: Check consistency of equations and derivations
+- **Physical soundness**: Evaluate theoretical assumptions and limitations  
+- **Conceptual clarity**: Improve explanations and theoretical understanding
+- **Formal verification**: Independent validation of theoretical claims
+
+### 🧪 **Experimental Assessment**
+- **Feasibility analysis**: Evaluate proposed experimental protocols
+- **Technical review**: Assess measurement requirements and capabilities
+- **Alternative designs**: Suggest improved experimental approaches
+- **Sensitivity estimates**: Independent verification of predicted effects
+
+### 💻 **Computational Validation**
+- **Code review**: Verify numerical implementations and algorithms
+- **Independent calculations**: Cross-check computational results
+- **Performance optimization**: Improve computational efficiency
+- **Numerical stability**: Ensure robust numerical methods
+
+### 📚 **Educational Enhancement**
+- **Pedagogical improvements**: Make concepts more accessible
+- **Documentation clarity**: Improve explanations and examples
+- **Interactive demonstrations**: Enhance learning tools
+- **Tutorial development**: Create step-by-step learning materials
 
 ## 🧪 Development Setup
 
