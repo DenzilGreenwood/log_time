@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTQG σ-Time Visualization Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            min-width: 300px;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            font-size: 12px;
+            max-width: 400px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        button.active {
+            background: #0066cc;
+        }
+        
+        .value-display {
+            color: #0ff;
+            font-weight: bold;
+        }
+        
+        .equation {
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Times New Roman', serif;
+            border-left: 3px solid #0066cc;
+        }
+        
+        .highlight {
+            color: #ff6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        
+        <div id="controls">
+            <h3>LTQG σ-Time Framework</h3>
+            
+            <div class="control-group">
+                <label>σ-Time: <span class="value-display" id="sigma-value">0.0</span></label>
+                <input type="range" id="sigma-slider" min="-5" max="3" step="0.1" value="0">
+                <div style="font-size: 11px; color: #888;">
+                    τ = τ₀ exp(σ) = <span class="value-display" id="tau-value">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Visualization Mode:</label>
+                <button id="mode-spacetime" class="active">Spacetime</button>
+                <button id="mode-hamiltonian">H_eff(σ)</button>
+                <button id="mode-phase">Phase Space</button>
+                <button id="mode-curvature">Curvature</button>
+            </div>
+            
+            <div class="control-group">
+                <label>System Type:</label>
+                <button id="system-flrw" class="active">FLRW</button>
+                <button id="system-schwarzschild">Schwarzschild</button>
+                <button id="system-harmonic">Harmonic Osc</button>
+                <button id="system-two-level">Two-Level</button>
+            </div>
+            
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="show-silence"> 
+                    Show Asymptotic Silence
+                </label>
+                <label>
+                    <input type="checkbox" id="show-grid" checked> 
+                    Show σ-Grid
+                </label>
+                <label>
+                    <input type="checkbox" id="animate" checked> 
+                    Auto-animate
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <label>Animation Speed: <span class="value-display" id="speed-value">1.0</span></label>
+                <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <button id="reset">Reset</button>
+            <button id="fullscreen">Fullscreen</button>
+        </div>
+        
+        <div id="info">
+            <div class="equation">
+                <strong>LTQG Core Equations:</strong><br>
+                σ ≡ log(τ/τ₀)<br>
+                iℏ ∂ψ/∂σ = H_eff(σ) ψ<br>
+                H_eff(σ) = τ(σ) H(τ(σ))
+            </div>
+            
+            <div id="current-values">
+                <strong>Current Values:</strong><br>
+                σ = <span class="highlight" id="display-sigma">0.0</span><br>
+                τ = <span class="highlight" id="display-tau">1.0</span><br>
+                H_eff norm = <span class="highlight" id="display-heff">1.0</span><br>
+                Silence factor = <span class="highlight" id="display-silence">1.0</span>
+            </div>
+            
+            <div id="physics-interpretation">
+                <strong>Physics:</strong><br>
+                <span id="interpretation-text">
+                Multiplicative time dilations → additive σ-shifts.<br>
+                Asymptotic silence as τ→0⁺ provides natural boundary conditions.
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        // LTQG σ-Time Visualization
+        class LTQGVisualization {
+            constructor() {
+                this.initializeScene();
+                this.initializeControls();
+                this.initializePhysics();
+                this.animate();
+            }
+            
+            initializeScene() {
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000011);
+                
+                // Camera position
+                this.camera.position.set(5, 5, 5);
+                this.camera.lookAt(0, 0, 0);
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                this.scene.add(directionalLight);
+                
+                // Initialize visualization objects
+                this.initializeVisualizationObjects();
+            }
+            
+            initializeVisualizationObjects() {
+                // σ-time grid
+                this.sigmaGrid = new THREE.Group();
+                this.createSigmaGrid();
+                this.scene.add(this.sigmaGrid);
+                
+                // Spacetime manifold
+                this.spacetimeManifold = new THREE.Group();
+                this.createSpacetimeManifold();
+                this.scene.add(this.spacetimeManifold);
+                
+                // Effective Hamiltonian visualization
+                this.hamiltonianVis = new THREE.Group();
+                this.createHamiltonianVisualization();
+                this.scene.add(this.hamiltonianVis);
+                
+                // Phase space visualization
+                this.phaseSpace = new THREE.Group();
+                this.createPhaseSpaceVisualization();
+                this.scene.add(this.phaseSpace);
+                
+                // Curvature visualization
+                this.curvatureVis = new THREE.Group();
+                this.createCurvatureVisualization();
+                this.scene.add(this.curvatureVis);
+                
+                // Initially show spacetime mode
+                this.setVisualizationMode('spacetime');
+            }
+            
+            createSigmaGrid() {
+                const gridMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x444444, 
+                    transparent: true, 
+                    opacity: 0.5 
+                });
+                
+                // σ-time grid lines
+                for (let sigma = -5; sigma <= 3; sigma += 0.5) {
+                    const geometry = new THREE.BufferGeometry();
+                    const points = [];
+                    
+                    for (let x = -10; x <= 10; x += 0.5) {
+                        const tau = Math.exp(sigma);
+                        const y = this.computeSpacetimeHeight(x, tau);
+                        points.push(x, y, sigma * 2); // Scale sigma for visualization
+                    }
+                    
+                    geometry.setFromPoints(points.map(p => new THREE.Vector3(p[0], p[1], p[2])));
+                    const line = new THREE.Line(geometry, gridMaterial);
+                    this.sigmaGrid.add(line);
+                }
+            }
+            
+            createSpacetimeManifold() {
+                const geometry = new THREE.PlaneGeometry(20, 16, 50, 40);
+                const material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0.0 },
+                        sigma: { value: 0.0 },
+                        systemType: { value: 0 }, // 0: FLRW, 1: Schwarzschild, etc.
+                        showSilence: { value: false }
+                    },
+                    vertexShader: `
+                        uniform float time;
+                        uniform float sigma;
+                        uniform int systemType;
+                        uniform bool showSilence;
+                        
+                        varying vec3 vPosition;
+                        varying float vHeight;
+                        varying float vSigma;
+                        
+                        float computeSpacetimeMetric(vec3 pos, float sig) {
+                            float tau = exp(sig);
+                            float r = length(pos.xy);
+                            
+                            if (systemType == 0) {
+                                // FLRW: scale factor evolution
+                                float a = pow(tau, 0.667); // Matter domination
+                                return a * (1.0 + 0.1 * sin(r * a));
+                            } else if (systemType == 1) {
+                                // Schwarzschild: redshift effects
+                                float rs = 2.0; // Schwarzschild radius
+                                float redshift = sqrt(max(0.1, 1.0 - rs/max(r, rs + 0.1)));
+                                return tau * redshift * (1.0 + 0.1 * sin(r));
+                            }
+                            
+                            return tau * (1.0 + 0.1 * sin(r));
+                        }
+                        
+                        float asymptotic_silence(float sig) {
+                            if (!showSilence) return 1.0;
+                            return 0.5 * (1.0 + tanh((sig + 2.0) / 1.0));
+                        }
+                        
+                        void main() {
+                            vPosition = position;
+                            
+                            // Map position to σ-coordinate
+                            vSigma = position.z * 0.5; // Map z to σ range
+                            
+                            // Compute spacetime height
+                            float height = computeSpacetimeMetric(position, vSigma);
+                            height *= asymptotic_silence(vSigma);
+                            
+                            vHeight = height;
+                            
+                            vec3 newPosition = position;
+                            newPosition.y = height;
+                            
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float time;
+                        uniform float sigma;
+                        
+                        varying vec3 vPosition;
+                        varying float vHeight;
+                        varying float vSigma;
+                        
+                        void main() {
+                            // Color based on σ-time and height
+                            float colorIntensity = abs(vHeight) * 0.5;
+                            
+                            vec3 color1 = vec3(0.0, 0.3, 1.0); // Blue for early σ
+                            vec3 color2 = vec3(1.0, 0.3, 0.0); // Red for late σ
+                            vec3 color3 = vec3(0.0, 1.0, 0.5); // Green for intermediate
+                            
+                            float t = (vSigma + 5.0) / 8.0; // Normalize σ to [0,1]
+                            vec3 baseColor = mix(color1, color2, t);
+                            
+                            // Add height-based intensity
+                            vec3 finalColor = baseColor * (0.5 + colorIntensity);
+                            
+                            // Highlight current σ-slice
+                            if (abs(vSigma - sigma) < 0.2) {
+                                finalColor += vec3(0.3, 0.3, 0.0);
+                            }
+                            
+                            gl_FragColor = vec4(finalColor, 0.8);
+                        }
+                    `,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+                
+                this.spacetimeMesh = new THREE.Mesh(geometry, material);
+                this.spacetimeMesh.rotation.x = -Math.PI / 2;
+                this.spacetimeManifold.add(this.spacetimeMesh);
+            }
+            
+            createHamiltonianVisualization() {
+                // Visualization of H_eff(σ) evolution
+                const geometry = new THREE.BufferGeometry();
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0x00ff00, 
+                    linewidth: 3 
+                });
+                
+                this.hamiltonianLine = new THREE.Line(geometry, material);
+                this.hamiltonianVis.add(this.hamiltonianLine);
+                
+                // Silence envelope visualization
+                const silenceGeometry = new THREE.BufferGeometry();
+                const silenceMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xff6600, 
+                    transparent: true, 
+                    opacity: 0.7 
+                });
+                
+                this.silenceLine = new THREE.Line(silenceGeometry, silenceMaterial);
+                this.hamiltonianVis.add(this.silenceLine);
+            }
+            
+            createPhaseSpaceVisualization() {
+                // Phase space for quantum evolution in σ-time
+                const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+                const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                
+                this.phaseParticles = [];
+                for (let i = 0; i < 100; i++) {
+                    const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                    this.phaseSpace.add(particle);
+                    this.phaseParticles.push(particle);
+                }
+            }
+            
+            createCurvatureVisualization() {
+                // Curvature scalar visualization
+                const geometry = new THREE.BufferGeometry();
+                const material = new THREE.PointsMaterial({ 
+                    color: 0xff00ff, 
+                    size: 0.1,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                this.curvaturePoints = new THREE.Points(geometry, material);
+                this.curvatureVis.add(this.curvaturePoints);
+            }
+            
+            initializeControls() {
+                // Slider controls
+                this.sigmaSlider = document.getElementById('sigma-slider');
+                this.speedSlider = document.getElementById('speed-slider');
+                
+                // Checkboxes
+                this.showSilenceCheck = document.getElementById('show-silence');
+                this.showGridCheck = document.getElementById('show-grid');
+                this.animateCheck = document.getElementById('animate');
+                
+                // Mode buttons
+                this.modeButtons = {
+                    spacetime: document.getElementById('mode-spacetime'),
+                    hamiltonian: document.getElementById('mode-hamiltonian'),
+                    phase: document.getElementById('mode-phase'),
+                    curvature: document.getElementById('mode-curvature')
+                };
+                
+                // System buttons
+                this.systemButtons = {
+                    flrw: document.getElementById('system-flrw'),
+                    schwarzschild: document.getElementById('system-schwarzschild'),
+                    harmonic: document.getElementById('system-harmonic'),
+                    twoLevel: document.getElementById('system-two-level')
+                };
+                
+                // Event listeners
+                this.sigmaSlider.addEventListener('input', (e) => {
+                    this.currentSigma = parseFloat(e.target.value);
+                    this.updateDisplay();
+                });
+                
+                this.speedSlider.addEventListener('input', (e) => {
+                    this.animationSpeed = parseFloat(e.target.value);
+                    document.getElementById('speed-value').textContent = e.target.value;
+                });
+                
+                this.showSilenceCheck.addEventListener('change', (e) => {
+                    this.showAsymptoticSilence = e.target.checked;
+                    this.updateVisualization();
+                });
+                
+                this.showGridCheck.addEventListener('change', (e) => {
+                    this.sigmaGrid.visible = e.target.checked;
+                });
+                
+                Object.keys(this.modeButtons).forEach(mode => {
+                    this.modeButtons[mode].addEventListener('click', () => {
+                        this.setVisualizationMode(mode);
+                        this.updateModeButtons(mode);
+                    });
+                });
+                
+                Object.keys(this.systemButtons).forEach(system => {
+                    this.systemButtons[system].addEventListener('click', () => {
+                        this.setSystemType(system);
+                        this.updateSystemButtons(system);
+                    });
+                });
+                
+                // Other controls
+                document.getElementById('reset').addEventListener('click', () => {
+                    this.reset();
+                });
+                
+                document.getElementById('fullscreen').addEventListener('click', () => {
+                    this.toggleFullscreen();
+                });
+                
+                // Window resize
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+            
+            initializePhysics() {
+                // Physics parameters
+                this.currentSigma = 0.0;
+                this.currentTau = 1.0;
+                this.animationSpeed = 1.0;
+                this.showAsymptoticSilence = false;
+                this.currentMode = 'spacetime';
+                this.currentSystem = 'flrw';
+                
+                // Time evolution
+                this.time = 0.0;
+                this.autoAnimate = true;
+            }
+            
+            computeSpacetimeHeight(x, tau) {
+                // Compute spacetime geometry based on current system
+                const r = Math.sqrt(x * x);
+                
+                switch (this.currentSystem) {
+                    case 'flrw':
+                        // Scale factor evolution: a ∝ t^(2/3) for matter
+                        const a = Math.pow(tau, 2/3);
+                        return a * (1 + 0.1 * Math.sin(r * a));
+                        
+                    case 'schwarzschild':
+                        // Redshift effects near event horizon
+                        const rs = 2.0;
+                        const redshift = Math.sqrt(Math.max(0.1, 1.0 - rs / Math.max(r, rs + 0.1)));
+                        return tau * redshift * (1 + 0.1 * Math.sin(r));
+                        
+                    case 'harmonic':
+                        // Harmonic oscillator potential
+                        return tau * Math.exp(-0.5 * r * r) * Math.cos(r);
+                        
+                    case 'twoLevel':
+                        // Two-level system evolution
+                        return tau * (1 + 0.5 * Math.cos(r)) * Math.exp(-r * r / 4);
+                        
+                    default:
+                        return tau * (1 + 0.1 * Math.sin(r));
+                }
+            }
+            
+            computeEffectiveHamiltonian(sigma) {
+                const tau = Math.exp(sigma);
+                let H_tau;
+                
+                switch (this.currentSystem) {
+                    case 'harmonic':
+                        H_tau = 1.0; // ω = 1
+                        break;
+                    case 'twoLevel':
+                        H_tau = Math.sqrt(1.0 + Math.pow(0.1 / tau, 2)); // Coupling decay
+                        break;
+                    case 'flrw':
+                        H_tau = 1.0 / tau; // Simplified cosmological evolution
+                        break;
+                    case 'schwarzschild':
+                        H_tau = 1.0; // Simplified
+                        break;
+                    default:
+                        H_tau = 1.0;
+                }
+                
+                const H_eff = tau * H_tau;
+                
+                // Apply asymptotic silence
+                if (this.showAsymptoticSilence) {
+                    const silenceFactor = 0.5 * (1 + Math.tanh((sigma + 2.0) / 1.0));
+                    return H_eff * silenceFactor;
+                }
+                
+                return H_eff;
+            }
+            
+            computeAsymptoticSilence(sigma) {
+                return 0.5 * (1 + Math.tanh((sigma + 2.0) / 1.0));
+            }
+            
+            setVisualizationMode(mode) {
+                this.currentMode = mode;
+                
+                // Hide all visualizations
+                this.spacetimeManifold.visible = false;
+                this.hamiltonianVis.visible = false;
+                this.phaseSpace.visible = false;
+                this.curvatureVis.visible = false;
+                
+                // Show selected visualization
+                switch (mode) {
+                    case 'spacetime':
+                        this.spacetimeManifold.visible = true;
+                        break;
+                    case 'hamiltonian':
+                        this.hamiltonianVis.visible = true;
+                        this.updateHamiltonianVisualization();
+                        break;
+                    case 'phase':
+                        this.phaseSpace.visible = true;
+                        this.updatePhaseSpaceVisualization();
+                        break;
+                    case 'curvature':
+                        this.curvatureVis.visible = true;
+                        this.updateCurvatureVisualization();
+                        break;
+                }
+            }
+            
+            setSystemType(system) {
+                this.currentSystem = system;
+                this.updateVisualization();
+                
+                // Update interpretation text
+                const interpretations = {
+                    flrw: 'FLRW cosmology: σ-time regularizes big bang singularity.',
+                    schwarzschild: 'Black hole: σ-time handles event horizon redshift.',
+                    harmonic: 'Harmonic oscillator: H_eff(σ) = τ ω with asymptotic silence.',
+                    twoLevel: 'Two-level system: time-dependent coupling in σ-coordinates.'
+                };
+                
+                document.getElementById('interpretation-text').textContent = interpretations[system];
+            }
+            
+            updateModeButtons(activeMode) {
+                Object.keys(this.modeButtons).forEach(mode => {
+                    this.modeButtons[mode].classList.remove('active');
+                });
+                this.modeButtons[activeMode].classList.add('active');
+            }
+            
+            updateSystemButtons(activeSystem) {
+                Object.keys(this.systemButtons).forEach(system => {
+                    this.systemButtons[system].classList.remove('active');
+                });
+                this.systemButtons[activeSystem].classList.add('active');
+            }
+            
+            updateHamiltonianVisualization() {
+                const points = [];
+                const silencePoints = [];
+                
+                for (let sigma = -5; sigma <= 3; sigma += 0.1) {
+                    const H_eff = this.computeEffectiveHamiltonian(sigma);
+                    const silenceFactor = this.computeAsymptoticSilence(sigma);
+                    
+                    points.push(new THREE.Vector3(sigma * 2, H_eff, 0));
+                    silencePoints.push(new THREE.Vector3(sigma * 2, silenceFactor * 5, 0));
+                }
+                
+                this.hamiltonianLine.geometry.setFromPoints(points);
+                this.silenceLine.geometry.setFromPoints(silencePoints);
+            }
+            
+            updatePhaseSpaceVisualization() {
+                // Update phase space particles based on σ-evolution
+                this.phaseParticles.forEach((particle, i) => {
+                    const angle = (i / this.phaseParticles.length) * 2 * Math.PI;
+                    const radius = 2 + Math.sin(this.currentSigma + angle) * 0.5;
+                    
+                    particle.position.x = radius * Math.cos(angle);
+                    particle.position.y = radius * Math.sin(angle);
+                    particle.position.z = this.currentSigma * 0.5;
+                    
+                    // Color based on energy
+                    const energy = this.computeEffectiveHamiltonian(this.currentSigma);
+                    const hue = (energy * 0.1) % 1.0;
+                    particle.material.color.setHSL(hue, 1.0, 0.5);
+                });
+            }
+            
+            updateCurvatureVisualization() {
+                const positions = [];
+                const colors = [];
+                
+                for (let x = -5; x <= 5; x += 0.5) {
+                    for (let z = -5; z <= 5; z += 0.5) {
+                        const sigma = z * 0.4;
+                        const tau = Math.exp(sigma);
+                        const r = Math.sqrt(x * x + z * z);
+                        
+                        // Simplified curvature scalar
+                        let curvature;
+                        if (this.currentSystem === 'flrw') {
+                            curvature = 6 / (tau * tau); // Simplified Ricci scalar
+                        } else {
+                            curvature = 1 / (tau * tau);
+                        }
+                        
+                        const y = Math.log(curvature + 1) * 0.5;
+                        
+                        positions.push(x, y, z);
+                        
+                        // Color based on curvature magnitude
+                        const intensity = Math.min(1.0, curvature * 0.1);
+                        colors.push(intensity, 0.5, 1.0 - intensity);
+                    }
+                }
+                
+                this.curvaturePoints.geometry.setAttribute('position', 
+                    new THREE.Float32BufferAttribute(positions, 3));
+                this.curvaturePoints.geometry.setAttribute('color', 
+                    new THREE.Float32BufferAttribute(colors, 3));
+            }
+            
+            updateVisualization() {
+                // Update spacetime shader uniforms
+                if (this.spacetimeMesh) {
+                    this.spacetimeMesh.material.uniforms.sigma.value = this.currentSigma;
+                    this.spacetimeMesh.material.uniforms.time.value = this.time;
+                    this.spacetimeMesh.material.uniforms.showSilence.value = this.showAsymptoticSilence;
+                    
+                    // Set system type uniform
+                    const systemTypes = { flrw: 0, schwarzschild: 1, harmonic: 2, twoLevel: 3 };
+                    this.spacetimeMesh.material.uniforms.systemType.value = systemTypes[this.currentSystem] || 0;
+                }
+                
+                // Update mode-specific visualizations
+                switch (this.currentMode) {
+                    case 'hamiltonian':
+                        this.updateHamiltonianVisualization();
+                        break;
+                    case 'phase':
+                        this.updatePhaseSpaceVisualization();
+                        break;
+                    case 'curvature':
+                        this.updateCurvatureVisualization();
+                        break;
+                }
+            }
+            
+            updateDisplay() {
+                this.currentTau = Math.exp(this.currentSigma);
+                
+                // Update slider display
+                document.getElementById('sigma-value').textContent = this.currentSigma.toFixed(2);
+                document.getElementById('tau-value').textContent = this.currentTau.toFixed(3);
+                
+                // Update info panel
+                document.getElementById('display-sigma').textContent = this.currentSigma.toFixed(3);
+                document.getElementById('display-tau').textContent = this.currentTau.toFixed(3);
+                
+                const H_eff = this.computeEffectiveHamiltonian(this.currentSigma);
+                document.getElementById('display-heff').textContent = H_eff.toFixed(3);
+                
+                const silenceFactor = this.computeAsymptoticSilence(this.currentSigma);
+                document.getElementById('display-silence').textContent = silenceFactor.toFixed(3);
+                
+                this.updateVisualization();
+            }
+            
+            reset() {
+                this.currentSigma = 0.0;
+                this.sigmaSlider.value = 0.0;
+                this.time = 0.0;
+                this.updateDisplay();
+            }
+            
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                this.time += 0.01;
+                
+                // Auto-animation
+                if (this.animateCheck.checked) {
+                    this.currentSigma += this.animationSpeed * 0.01;
+                    if (this.currentSigma > 3) this.currentSigma = -5;
+                    this.sigmaSlider.value = this.currentSigma;
+                    this.updateDisplay();
+                }
+                
+                // Camera rotation
+                const radius = 8;
+                this.camera.position.x = radius * Math.cos(this.time * 0.2);
+                this.camera.position.z = radius * Math.sin(this.time * 0.2);
+                this.camera.lookAt(0, 0, 0);
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+        
+        // Initialize visualization when page loads
+        window.addEventListener('load', () => {
+            new LTQGVisualization();
+        });
+    </script>
+</body>
+</html>

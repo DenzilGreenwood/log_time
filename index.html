@@ -240,7 +240,9 @@
             
             <div style="text-align:center; margin-top: 2rem;">
                 <a href="https://github.com/DenzilGreenwood/log_time" class="btn btn-accent" style="margin-right: 1rem;" aria-label="View LTQG project on GitHub">View on GitHub</a>
-                <a href="ltqg_black_hole_webgl.html" class="btn" aria-label="Launch interactive LTQG black hole demonstration">Live WebGL Demo</a>
+                <a href="ltqg_black_hole_webgl.html" class="btn" aria-label="Launch interactive LTQG black hole demonstration">WebGL Black Hole</a>
+                <a href="ltqg_quantum_well_minimal.html" class="btn" aria-label="Launch minimal LTQG quantum well simulation">Quantum Well (Canvas)</a>
+                <a href="ltqg_extended_applications.html" class="btn" aria-label="Explore LTQG applications beyond gravity">Extended Applications</a>
                 <a href="#download" class="btn" style="margin-left: 1rem;" aria-label="Download LTQG code and documentation">Download Code</a>
             </div>
         </div>
@@ -282,6 +284,61 @@
                     <h3>⚖️ Paradigm Comparison</h3>
                     <p>Toggle between standard General Relativity and LTQG views to see the differences in coordinate behavior and singularity treatment.</p>
                 </div>
+                
+                <div class="feature">
+                    <h3>⚛️ Quantum Evolution</h3>
+                    <p>Interactive quantum well simulations demonstrate the σ-Schrödinger equation with exponential time scaling, featuring professional-grade numerics and real-time diagnostics.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2>⚛️ LTQG Quantum Mechanics</h2>
+            <p>Explore how the σ-time coordinate affects quantum evolution through interactive simulations of the σ-Schrödinger equation.</p>
+            
+            <div class="equation">
+                \( i\hbar \frac{\partial\psi}{\partial\sigma} = \tau_0 e^{\sigma} \hat{H} \psi \)
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>🌊 Quantum Well Simulation (WebGL)</h3>
+                    <p><strong>Professional 3D visualization</strong> of quantum wave packet evolution in σ-time coordinates. Features real-time Three.js rendering, worker-based numerical integration, and comprehensive physics diagnostics including energy monitoring and adaptive time stepping.</p>
+                    <div style="margin-top: 15px;">
+                        <a href="ltqg_quantum_well.html" class="btn" style="font-size: 0.9em;">Launch WebGL Demo</a>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <h3>📊 Quantum Well Simulation (Canvas)</h3>
+                    <p><strong>Zero-dependency implementation</strong> using HTML5 Canvas for maximum compatibility. Includes absorbing boundary conditions, NaN protection, and comprehensive diagnostic logging. Perfect for educational use and systems without WebGL support.</p>
+                    <div style="margin-top: 15px;">
+                        <a href="ltqg_quantum_well_minimal.html" class="btn" style="font-size: 0.9em;">Launch Canvas Demo</a>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <h3>🔬 Advanced Features</h3>
+                    <p><strong>Publication-ready numerics:</strong> 512-point grids, adaptive σ-stepping, absorbing boundaries, energy conservation monitoring, and JSON data export. Demonstrates exponential time scaling τ = τ₀e^σ effects on quantum evolution with professional-grade stability.</p>
+                    <div style="margin-top: 15px;">
+                        <a href="#quantum-features" class="btn" style="font-size: 0.9em;">Technical Details</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="quantum-features" class="assumptions">
+                <h4>🔧 Quantum Simulation Features</h4>
+                <ul style="text-align: left; max-width: 700px; margin: 0 auto;">
+                    <li><strong>σ-Schrödinger Evolution:</strong> Explicit Euler integration with exponential time scaling factor τ₀e^σ</li>
+                    <li><strong>Adaptive Time Stepping:</strong> Automatic Δσ limiting to prevent numerical instability as σ increases</li>
+                    <li><strong>Absorbing Boundaries:</strong> Smooth cos² taper over outer 15% of domain prevents reflection artifacts</li>
+                    <li><strong>Energy Conservation:</strong> Real-time monitoring of ⟨ψ|Ĥ|ψ⟩ = ⟨T⟩ + ⟨V⟩ to detect numerical drift</li>
+                    <li><strong>NaN Protection:</strong> Comprehensive overflow detection and automatic wavefunction recovery</li>
+                    <li><strong>Data Export:</strong> JSON output with complete wavefunction, parameters, and evolution trail</li>
+                    <li><strong>Grid Resolution:</strong> 512 points over 40+ spatial units with dx = 0.08 for professional accuracy</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -346,6 +403,22 @@
                     <div class="figure-card-content">
                         <h4>Black Hole Embedding</h4>
                         <p>Interactive visualization of LTQG geometry</p>
+                    </div>
+                </div>
+                
+                <div class="figure-card">
+                    <img src="figs/quantum_zeno_comparison.png" alt="LTQG quantum evolution vs standard Schrödinger equation" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>σ-Schrödinger Evolution</h4>
+                        <p>Quantum wave packet in LTQG σ-time coordinates</p>
+                    </div>
+                </div>
+                
+                <div class="figure-card">
+                    <img src="figs/qft_sigma_detailed_analysis.png" alt="Detailed analysis of quantum field theory in σ-time" loading="lazy">
+                    <div class="figure-card-content">
+                        <h4>QFT in σ-Time</h4>
+                        <p>Field theory analysis in logarithmic time</p>
                     </div>
                 </div>
             </div>

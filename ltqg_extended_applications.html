@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTQG Extended Applications - Beyond Gravity</title>
+    <meta name="description" content="Exploring Log-Time Quantum Gravity applications in thermodynamics, information, cosmology, neuroscience, and signal processing">
+    
+    <!-- MathJax for equations -->
+    <script>
+      MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] } };
+    </script>
+    <script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .applications-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .application-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .application-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .card-header.thermo {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        
+        .card-header.info {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+        
+        .card-header.cosmo {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #333;
+        }
+        
+        .card-header.neuro {
+            background: linear-gradient(135deg, #96fbc4 0%, #f9f586 100%);
+            color: #333;
+        }
+        
+        .card-header.signal {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+        
+        .card-header h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+        }
+        
+        .card-content {
+            padding: 25px;
+        }
+        
+        .equation-box {
+            background: #f8f9fa;
+            border-left: 4px solid #4facfe;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .demo-section {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="range"] {
+            width: 120px;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        
+        .btn {
+            background: #4facfe;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #3d8bfe;
+        }
+        
+        .visualization {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .results {
+            background: #f1f8e9;
+            border: 1px solid #c5e1a5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .insight-box {
+            background: #fff3e0;
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .insight-box h4 {
+            color: #f57c00;
+            margin-top: 0;
+        }
+        
+        .back-nav {
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .back-nav a {
+            color: #4facfe;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1em;
+        }
+        
+        .back-nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>🌟 LTQG Extended Applications</h1>
+            <p class="subtitle">Exploring σ-time beyond gravity: thermodynamics, information, cosmology, neuroscience, and signal processing</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="applications-grid">
+            
+            <!-- Quantum Thermodynamics -->
+            <div class="application-card">
+                <div class="card-header thermo">
+                    <h3>🔥 Quantum Thermodynamics</h3>
+                    <p>σ-time entropy production and scale-invariant thermodynamic arrow</p>
+                </div>
+                <div class="card-content">
+                    <div class="equation-box">
+                        \( \frac{dS}{d\sigma} = \frac{dS}{dt} \cdot \frac{dt}{d\sigma} = \frac{dS}{dt} \cdot \tau_0 e^{\sigma} \)
+                    </div>
+                    
+                    <p><strong>Key Insight:</strong> In σ-time, entropy production becomes scale-invariant. The second law transforms to reveal logarithmic growth patterns that may be universal across energy scales.</p>
+                    
+                    <div class="demo-section">
+                        <h4>🧪 Interactive Demo: σ-Entropy Evolution</h4>
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>Temperature T₀:</label>
+                                <input type="range" id="temp0" min="0.1" max="5" step="0.1" value="1">
+                                <span id="temp0-val">1.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Coupling g:</label>
+                                <input type="range" id="coupling" min="0.01" max="1" step="0.01" value="0.1">
+                                <span id="coupling-val">0.10</span>
+                            </div>
+                            <div class="control-group">
+                                <label>σ range:</label>
+                                <input type="range" id="sigma-range" min="1" max="10" step="0.5" value="5">
+                                <span id="sigma-range-val">5.0</span>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="runThermoDemo()">Run σ-Thermodynamics</button>
+                        <canvas id="thermo-canvas" class="visualization"></canvas>
+                        <div id="thermo-results" class="results">
+                            Entropy production rate: dS/dσ = <span id="entropy-rate">0.00</span><br>
+                            Scale-invariant factor: τ₀e^σ = <span id="scale-factor">1.00</span><br>
+                            Thermodynamic efficiency: η = <span id="efficiency">0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="insight-box">
+                        <h4>💡 Physical Significance</h4>
+                        <p>σ-time thermodynamics reveals that entropy production follows logarithmic scaling laws. This suggests a deep connection between gravitational time dilation and thermodynamic irreversibility.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quantum Information -->
+            <div class="application-card">
+                <div class="card-header info">
+                    <h3>💻 Quantum Information</h3>
+                    <p>σ-time as complexity clock in holographic dualities</p>
+                </div>
+                <div class="card-content">
+                    <div class="equation-box">
+                        \( C(\sigma) = \int_0^{\sigma} \frac{dC}{d\sigma'} d\sigma' = \int_0^t \frac{dC}{dt'} \tau_0 e^{\sigma(t')} dt' \)
+                    </div>
+                    
+                    <p><strong>Key Insight:</strong> Computational complexity grows exponentially with physical time but linearly with σ-time, providing a natural "complexity clock" for holographic dualities.</p>
+                    
+                    <div class="demo-section">
+                        <h4>🧮 Interactive Demo: Complexity Growth</h4>
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>Qubits N:</label>
+                                <input type="range" id="qubits" min="2" max="20" step="1" value="10">
+                                <span id="qubits-val">10</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Gate rate λ:</label>
+                                <input type="range" id="gate-rate" min="0.1" max="2" step="0.1" value="1">
+                                <span id="gate-rate-val">1.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Entanglement α:</label>
+                                <input type="range" id="entanglement" min="0" max="1" step="0.05" value="0.5">
+                                <span id="entanglement-val">0.50</span>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="runInfoDemo()">Run Complexity Analysis</button>
+                        <canvas id="info-canvas" class="visualization"></canvas>
+                        <div id="info-results" class="results">
+                            Max complexity: C_max = <span id="max-complexity">0</span><br>
+                            Growth rate: dC/dσ = <span id="complexity-rate">0.00</span><br>
+                            Holographic bound: S_BH/4G = <span id="holographic-bound">0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="insight-box">
+                        <h4>💡 Holographic Connection</h4>
+                        <p>In AdS/CFT correspondence, boundary complexity maps to bulk geometry. σ-time provides a natural parametrization where complexity growth is linear, matching geometric expectations.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quantum Cosmological Perturbations -->
+            <div class="application-card">
+                <div class="card-header cosmo">
+                    <h3>🌌 Cosmological Perturbations</h3>
+                    <p>σ-time inflation and regularized power spectra</p>
+                </div>
+                <div class="card-content">
+                    <div class="equation-box">
+                        \( \mathcal{P}(k, \sigma) = \frac{H^2(\sigma)}{8\pi^2 M_P^2 \epsilon(\sigma)} \left(\frac{k}{a(\sigma)H(\sigma)}\right)^{n_s - 1} \)
+                    </div>
+                    
+                    <p><strong>Key Insight:</strong> Inflation in σ-time coordinates may regularize near-horizon power spectra and provide natural cutoffs for trans-Planckian modes.</p>
+                    
+                    <div class="demo-section">
+                        <h4>🌊 Interactive Demo: σ-Inflation Perturbations</h4>
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>Hubble H₀:</label>
+                                <input type="range" id="hubble" min="0.5" max="2" step="0.1" value="1">
+                                <span id="hubble-val">1.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Spectral index n_s:</label>
+                                <input type="range" id="spectral-index" min="0.9" max="1.1" step="0.01" value="0.96">
+                                <span id="spectral-index-val">0.96</span>
+                            </div>
+                            <div class="control-group">
+                                <label>ε parameter:</label>
+                                <input type="range" id="epsilon" min="0.001" max="0.1" step="0.001" value="0.01">
+                                <span id="epsilon-val">0.010</span>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="runCosmoDemo()">Run Perturbation Analysis</button>
+                        <canvas id="cosmo-canvas" class="visualization"></canvas>
+                        <div id="cosmo-results" class="results">
+                            Power spectrum amplitude: A_s = <span id="power-amplitude">0.00</span><br>
+                            σ-regularization scale: k_reg = <span id="regularization">0.00</span> Mpc⁻¹<br>
+                            Tensor-to-scalar ratio: r = <span id="tensor-scalar">0.000</span>
+                        </div>
+                    </div>
+                    
+                    <div class="insight-box">
+                        <h4>💡 Trans-Planckian Resolution</h4>
+                        <p>σ-time inflation provides natural UV cutoffs, potentially resolving trans-Planckian problems in standard inflation while preserving nearly scale-invariant spectra.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Neuroscience / Cognitive Timing -->
+            <div class="application-card">
+                <div class="card-header neuro">
+                    <h3>🧠 Cognitive Timing</h3>
+                    <p>Logarithmic time perception and Weber-Fechner law</p>
+                </div>
+                <div class="card-content">
+                    <div class="equation-box">
+                        \( P(\sigma) = k \log\left(\frac{S}{S_0}\right) = k \log\left(\frac{\tau}{\tau_0}\right) = k \sigma \)
+                    </div>
+                    
+                    <p><strong>Key Insight:</strong> Human time perception follows Weber-Fechner law: perceived duration is logarithmic in stimulus duration. This naturally maps to σ-time coordinates!</p>
+                    
+                    <div class="demo-section">
+                        <h4>⏱️ Interactive Demo: Cognitive σ-Time</h4>
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>Weber fraction:</label>
+                                <input type="range" id="weber" min="0.01" max="0.5" step="0.01" value="0.1">
+                                <span id="weber-val">0.10</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Base duration τ₀:</label>
+                                <input type="range" id="base-duration" min="0.1" max="2" step="0.1" value="1">
+                                <span id="base-duration-val">1.0</span> s
+                            </div>
+                            <div class="control-group">
+                                <label>Attention factor:</label>
+                                <input type="range" id="attention" min="0.5" max="2" step="0.1" value="1">
+                                <span id="attention-val">1.0</span>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="runNeuroDemo()">Run Perception Model</button>
+                        <canvas id="neuro-canvas" class="visualization"></canvas>
+                        <div id="neuro-results" class="results">
+                            Perceived duration: P = <span id="perceived-duration">0.00</span> σ-units<br>
+                            Just noticeable difference: JND = <span id="jnd">0.00</span> s<br>
+                            Temporal resolution: Δt_min = <span id="temporal-resolution">0.00</span> ms
+                        </div>
+                    </div>
+                    
+                    <div class="insight-box">
+                        <h4>💡 Neural Implementation</h4>
+                        <p>Brain circuits may naturally implement σ-time through logarithmic firing rate encoding, explaining why temporal perception scales logarithmically across many orders of magnitude.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Signal Processing / Wavelets -->
+            <div class="application-card">
+                <div class="card-header signal">
+                    <h3>📡 Signal Processing</h3>
+                    <p>σ-mapped Fourier analysis and wavelet transforms</p>
+                </div>
+                <div class="card-content">
+                    <div class="equation-box">
+                        \( \tilde{f}(\omega, \sigma) = \int_{-\infty}^{\infty} f(t) e^{-i\omega t} \frac{dt}{d\sigma} d\sigma = \tau_0 \int_{-\infty}^{\infty} f(t) e^{-i\omega t + \sigma(t)} d\sigma \)
+                    </div>
+                    
+                    <p><strong>Key Insight:</strong> σ-mapping provides natural logarithmic frequency compression, matching human auditory processing and optimizing for exponential frequency distributions in physics.</p>
+                    
+                    <div class="demo-section">
+                        <h4>🎵 Interactive Demo: σ-Fourier Analysis</h4>
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>Signal type:</label>
+                                <select id="signal-type">
+                                    <option value="chirp">Frequency chirp</option>
+                                    <option value="noise">Pink noise</option>
+                                    <option value="harmonic">Harmonic series</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>σ compression:</label>
+                                <input type="range" id="compression" min="0.1" max="2" step="0.1" value="1">
+                                <span id="compression-val">1.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Frequency range:</label>
+                                <input type="range" id="freq-range" min="1" max="5" step="0.5" value="3">
+                                <span id="freq-range-val">3.0</span> decades
+                            </div>
+                        </div>
+                        <button class="btn" onclick="runSignalDemo()">Run σ-Transform</button>
+                        <canvas id="signal-canvas" class="visualization"></canvas>
+                        <div id="signal-results" class="results">
+                            Frequency resolution: Δf = <span id="freq-resolution">0.00</span> Hz<br>
+                            Time-frequency product: ΔtΔf = <span id="uncertainty">0.00</span><br>
+                            Compression ratio: R = <span id="compression-ratio">1.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="insight-box">
+                        <h4>💡 Audio & Physics Applications</h4>
+                        <p>σ-transforms naturally match: (1) Human auditory processing (logarithmic frequency perception), (2) Physical systems with exponential frequency distributions, (3) Optimal information compression for broadband signals.</p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <div class="back-nav">
+            <a href="index.html">← Back to Main LTQG Portal</a>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize value displays
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update all range input displays
+            const ranges = document.querySelectorAll('input[type="range"]');
+            ranges.forEach(range => {
+                const valueSpan = document.getElementById(range.id + '-val');
+                if (valueSpan) {
+                    valueSpan.textContent = parseFloat(range.value).toFixed(2);
+                    range.addEventListener('input', () => {
+                        valueSpan.textContent = parseFloat(range.value).toFixed(2);
+                    });
+                }
+            });
+        });
+        
+        // Thermodynamics Demo
+        function runThermoDemo() {
+            const canvas = document.getElementById('thermo-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const T0 = parseFloat(document.getElementById('temp0').value);
+            const g = parseFloat(document.getElementById('coupling').value);
+            const sigmaMax = parseFloat(document.getElementById('sigma-range').value);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Plot entropy vs σ
+            ctx.strokeStyle = '#fa709a';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const points = 200;
+            for (let i = 0; i <= points; i++) {
+                const sigma = (i / points) * sigmaMax;
+                const tau_eff = Math.exp(sigma);
+                const entropy = T0 * Math.log(1 + g * tau_eff);
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height - (entropy / (T0 * Math.log(1 + g * Math.exp(sigmaMax)))) * canvas.height * 0.8;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('S(σ)', 10, 20);
+            ctx.fillText('σ →', canvas.width - 40, canvas.height - 10);
+            
+            // Update results
+            const finalSigma = sigmaMax;
+            const entropyRate = T0 * g * Math.exp(finalSigma) / (1 + g * Math.exp(finalSigma));
+            const scaleFactor = Math.exp(finalSigma);
+            const efficiency = 1 - Math.exp(-g * scaleFactor);
+            
+            document.getElementById('entropy-rate').textContent = entropyRate.toFixed(3);
+            document.getElementById('scale-factor').textContent = scaleFactor.toFixed(2);
+            document.getElementById('efficiency').textContent = efficiency.toFixed(3);
+        }
+        
+        // Information Demo
+        function runInfoDemo() {
+            const canvas = document.getElementById('info-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const N = parseInt(document.getElementById('qubits').value);
+            const lambda = parseFloat(document.getElementById('gate-rate').value);
+            const alpha = parseFloat(document.getElementById('entanglement').value);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Plot complexity growth
+            ctx.strokeStyle = '#4facfe';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const maxComplexity = Math.pow(2, N);
+            const points = 100;
+            
+            for (let i = 0; i <= points; i++) {
+                const sigma = (i / points) * 5;
+                const complexity = maxComplexity * (1 - Math.exp(-lambda * alpha * sigma));
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height - (complexity / maxComplexity) * canvas.height * 0.8;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Add exponential bound
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for (let i = 0; i <= points; i++) {
+                const sigma = (i / points) * 5;
+                const bound = maxComplexity * Math.exp(-Math.exp(-sigma));
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height - (bound / maxComplexity) * canvas.height * 0.8;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('C(σ)', 10, 20);
+            ctx.fillText('Exponential bound', 10, 40);
+            ctx.fillText('σ →', canvas.width - 40, canvas.height - 10);
+            
+            // Update results
+            const complexityRate = lambda * alpha * maxComplexity;
+            const holographicBound = N * Math.log(2) / (4 * 6.67e-11); // Simplified
+            
+            document.getElementById('max-complexity').textContent = maxComplexity.toExponential(2);
+            document.getElementById('complexity-rate').textContent = complexityRate.toExponential(2);
+            document.getElementById('holographic-bound').textContent = holographicBound.toExponential(2);
+        }
+        
+        // Cosmology Demo
+        function runCosmoDemo() {
+            const canvas = document.getElementById('cosmo-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const H0 = parseFloat(document.getElementById('hubble').value);
+            const ns = parseFloat(document.getElementById('spectral-index').value);
+            const epsilon = parseFloat(document.getElementById('epsilon').value);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Plot power spectrum
+            ctx.strokeStyle = '#ff9a9e';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const points = 100;
+            const kMin = 1e-4, kMax = 1e-1;
+            
+            for (let i = 0; i <= points; i++) {
+                const logk = Math.log10(kMin) + (i / points) * (Math.log10(kMax) - Math.log10(kMin));
+                const k = Math.pow(10, logk);
+                const power = Math.pow(H0, 2) / (8 * Math.PI * Math.PI * epsilon) * Math.pow(k, ns - 1);
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height - Math.log10(power / 1e-9) / 3 * canvas.height * 0.8;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // σ-regularization cutoff
+            ctx.strokeStyle = '#666';
+            ctx.setLineDash([3, 3]);
+            const cutoffX = canvas.width * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(cutoffX, 0);
+            ctx.lineTo(cutoffX, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('log P(k)', 10, 20);
+            ctx.fillText('σ-cutoff', cutoffX + 5, 20);
+            ctx.fillText('log k →', canvas.width - 60, canvas.height - 10);
+            
+            // Update results
+            const powerAmplitude = Math.pow(H0, 2) / (8 * Math.PI * Math.PI * epsilon);
+            const regularization = H0 * Math.exp(-2); // Simplified σ-cutoff
+            const tensorScalar = 16 * epsilon;
+            
+            document.getElementById('power-amplitude').textContent = powerAmplitude.toExponential(2);
+            document.getElementById('regularization').textContent = regularization.toExponential(2);
+            document.getElementById('tensor-scalar').textContent = tensorScalar.toFixed(3);
+        }
+        
+        // Neuroscience Demo
+        function runNeuroDemo() {
+            const canvas = document.getElementById('neuro-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const weber = parseFloat(document.getElementById('weber').value);
+            const tau0 = parseFloat(document.getElementById('base-duration').value);
+            const attention = parseFloat(document.getElementById('attention').value);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Plot perceived vs actual duration
+            ctx.strokeStyle = '#96fbc4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const points = 100;
+            const tauMax = 10;
+            
+            for (let i = 1; i <= points; i++) {
+                const tau = (i / points) * tauMax;
+                const sigma = Math.log(tau / tau0);
+                const perceived = attention * sigma;
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height - (perceived + 2) / 4 * canvas.height * 0.8;
+                
+                if (i === 1) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Linear reference
+            ctx.strokeStyle = '#ccc';
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('Perceived (σ)', 10, 20);
+            ctx.fillText('Linear', canvas.width - 50, 20);
+            ctx.fillText('Actual duration →', canvas.width - 120, canvas.height - 10);
+            
+            // Update results
+            const perceived = attention * Math.log(5 / tau0); // At 5s
+            const jnd = weber * 1.0; // At 1s baseline
+            const tempRes = tau0 * weber * 1000; // In milliseconds
+            
+            document.getElementById('perceived-duration').textContent = perceived.toFixed(2);
+            document.getElementById('jnd').textContent = jnd.toFixed(3);
+            document.getElementById('temporal-resolution').textContent = tempRes.toFixed(1);
+        }
+        
+        // Signal Processing Demo
+        function runSignalDemo() {
+            const canvas = document.getElementById('signal-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const signalType = document.getElementById('signal-type').value;
+            const compression = parseFloat(document.getElementById('compression').value);
+            const freqRange = parseFloat(document.getElementById('freq-range').value);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate signal based on type
+            const points = 200;
+            const tMax = 2;
+            
+            // Time domain
+            ctx.strokeStyle = '#fecfef';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= points; i++) {
+                const t = (i / points) * tMax;
+                let signal = 0;
+                
+                switch(signalType) {
+                    case 'chirp':
+                        signal = Math.sin(2 * Math.PI * (1 + 5*t) * t);
+                        break;
+                    case 'noise':
+                        signal = (Math.random() - 0.5) * Math.pow(1 + t, -0.5);
+                        break;
+                    case 'harmonic':
+                        for (let h = 1; h <= 5; h++) {
+                            signal += Math.sin(2 * Math.PI * h * t) / h;
+                        }
+                        break;
+                }
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height/2 + signal * canvas.height * 0.2;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // σ-transformed version
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= points; i++) {
+                const sigma = -2 + (i / points) * 4;
+                const t = Math.exp(sigma);
+                let signal = 0;
+                
+                switch(signalType) {
+                    case 'chirp':
+                        signal = Math.sin(2 * Math.PI * (1 + 5*t) * t);
+                        break;
+                    case 'noise':
+                        signal = (Math.random() - 0.5) * Math.pow(1 + t, -0.5);
+                        break;
+                    case 'harmonic':
+                        for (let h = 1; h <= 5; h++) {
+                            signal += Math.sin(2 * Math.PI * h * t) / h;
+                        }
+                        break;
+                }
+                
+                const x = (i / points) * canvas.width;
+                const y = canvas.height/2 + signal * compression * canvas.height * 0.2;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('Original', 10, 20);
+            ctx.fillText('σ-mapped', 10, 40);
+            ctx.fillText('Time/σ →', canvas.width - 70, canvas.height - 10);
+            
+            // Update results
+            const freqRes = 1 / (tMax * compression);
+            const uncertainty = 0.5; // Theoretical minimum
+            const compRatio = Math.pow(10, freqRange) / (1 + compression);
+            
+            document.getElementById('freq-resolution').textContent = freqRes.toFixed(2);
+            document.getElementById('uncertainty').textContent = uncertainty.toFixed(2);
+            document.getElementById('compression-ratio').textContent = compRatio.toFixed(2);
+        }
+    </script>
+</body>
+</html>
